@@ -122,7 +122,7 @@ async function main() {
       img = img.extend({ top: pad, bottom: pad, left: pad, right: pad, background: '#ffffff' });
       const k = w < 1000 ? SCALE : 1;
       if (k > 1) img = img.resize({ width: Math.round((w + 2 * pad) * k), kernel: 'lanczos3' });
-      img = img.sharpen({ sigma: 0.9, m1: 0.8, m2: 2.5 });
+      img = img.sharpen({sigma: 0.9, m1: 0.9, m2: 2.5});
       const ext = path.extname(f).toLowerCase();
       img = ext === '.png' ? img.png({ compressionLevel: 9 }) : /jpe?g/.test(ext) ? img.jpeg({ quality: 93 }) : img.webp({ quality: 92, effort: 5 });
       const outPath = PREVIEW ? path.join(PREV, rel) : f;
