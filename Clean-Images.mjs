@@ -4,7 +4,8 @@
 //   - removes the small header line ("159 · MSQ · 2 marks"), because the site already shows type and marks
 //   - trims the empty white margins, then adds a small even border
 //   - enlarges small pictures and sharpens them so text is crisper
-// It does NOT touch watermarks.
+// It does NOT touch watermarks. It is built so that it never cuts real content: blue graphs, shaded tables and diagrams are kept,
+// and anything that removes more than 12% of a picture is listed in clean-report.txt (and saved side by side in qimages_review/) so you can check it.
 //
 // Run from the site folder (the one with index.html, questions.js and qimages/):
 //   Windows:  double-click run-clean-images.bat
@@ -24,6 +25,9 @@ async function loadSharp() {
 }
 
 // ---------- analysis (pure function on raw RGB pixels) ----------
+// Safety rule: a blue/teal area is only treated as a banner when it is a thin full-width bar AND (almost) nothing else
+// lies on the far side of it. Blue graphs, shaded tables and diagrams are content and are always kept. Coloured
+// pixels count as content when the question's top and bottom edges are found, so nothing is ever sliced off.
 export function analyze(data, W, H) {
   const bannerPx = (r, g, b) => {
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), ch = mx - mn;
@@ -35,7 +39,7 @@ export function analyze(data, W, H) {
   };
   const inkPx = (r, g, b) => {
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-    return mn < 140 || (mx - mn >= 90 && mx < 215);  // dark text, or strongly coloured drawing; pale watermark is ignored
+    return mn < 200 || (mx - mn >= 40 && mn < 235);  // dark text, grey lines, ANY coloured drawing (blue too); only very pale watermark is ignored
   };
   const redPx = (r, g, b) => r > 150 && g < 125 && b < 145 && r - g > 70;
 
@@ -45,26 +49,36 @@ export function analyze(data, W, H) {
     for (let x = 0; x < W; x++, o += 3) {
       const r = data[o], g = data[o + 1], b = data[o + 2];
       if (bannerPx(r, g, b)) { bc[y]++; if (x < bmin[y]) bmin[y] = x; if (x > bmax[y]) bmax[y] = x; }
-      else if (inkPx(r, g, b)) ic[y]++;
+      if (inkPx(r, g, b)) ic[y]++;
     }
   }
   const isBannerRow = y => bc[y] >= 0.3 * W && bmax[y] - bmin[y] >= 0.6 * W;
 
-  // bands of banner rows (small gaps allowed, because the banner contains text)
-  const bands = []; let cur = null;
+  // bands of banner rows (small gaps allowed, because the banner contains text); thick blue areas are figures, not banners
+  const maxThick = Math.max(40, Math.round(0.14 * H)), bands = [], notes = []; let cur = null;
   for (let y = 0; y < H; y++) {
     if (isBannerRow(y)) { if (cur && y - cur.y1 <= 10) cur.y1 = y; else { cur = { y0: y, y1: y }; bands.push(cur); } }
   }
-  let top = 0, bottom = H; const notes = [];
-  for (const b of bands) {
-    if (b.y1 < H * 0.3) { top = Math.max(top, b.y1 + 1); notes.push('top banner'); }
-    else if (b.y0 > H * 0.4) { bottom = Math.min(bottom, b.y0); notes.push('bottom banner'); }
-  }
-  const inkRows = (a, z) => { let n = 0; for (let y = a; y < z; y++) if (ic[y] >= 2) n++; return n; };
-  if ((top > 0 || bottom < H) && inkRows(top, bottom) < 12) { top = 0; bottom = H; notes.length = 0; notes.push('banner cut skipped (nothing would be left)'); }
+  const real = bands.filter(b => b.y1 - b.y0 + 1 <= maxThick);
+  if (real.length < bands.length) notes.push('large blue area kept (it is part of the question)');
+  const inBand = new Uint8Array(H); for (const b of real) for (let y = b.y0; y <= b.y1; y++) inBand[y] = 1;
+  const content = (a, z) => { let n = 0; for (let y = Math.max(0, a); y < Math.min(H, z); y++) if (ic[y] >= 2 && !inBand[y]) n++; return n; };
 
-  // first row of ink, then maybe drop the header line
-  const firstInk = (a, z) => { for (let y = a; y < z; y++) if (ic[y] >= 2) return y; return -1; };
+  let top = 0, bottom = H;
+  for (const b of real) {
+    if (b.y1 < H * 0.3) {
+      if (content(0, b.y0) <= Math.max(4, Math.round(0.01 * H))) { top = Math.max(top, b.y1 + 1); notes.push('top banner'); }
+      else notes.push('blue bar near the top kept (there is text above it)');
+    } else if (b.y0 > H * 0.4) {
+      if (content(b.y1 + 1, H) <= Math.max(6, Math.round(0.02 * H))) { bottom = Math.min(bottom, b.y0); notes.push('bottom banner'); }
+      else notes.push('blue bar near the bottom kept (there is content below it)');
+    }
+  }
+  const inkRows = (a, z) => { let n = 0; for (let y = a; y < z; y++) if (ic[y] >= 2 && !inBand[y]) n++; return n; };
+  if ((top > 0 || bottom < H) && (inkRows(top, bottom) < 12 || top + (H - bottom) > 0.45 * H)) { top = 0; bottom = H; notes.length = 0; notes.push('REVIEW: banner cut skipped (it would have removed too much)'); }
+
+  // first row of ink, then maybe drop the one-line header ("159 . MSQ . 2 marks")
+  const firstInk = (a, z) => { for (let y = a; y < z; y++) if (ic[y] >= 2 && !inBand[y]) return y; return -1; };
   let y0 = firstInk(top, bottom);
   if (y0 >= 0) {
     let y1 = y0, blank = 0;
@@ -81,16 +95,17 @@ export function analyze(data, W, H) {
       let o = (y * W + minx) * 3;
       for (let x = minx; x <= Math.min(maxx, minx + Math.max(40, (maxx - minx) * 0.3)); x++, o += 3) if (redPx(data[o], data[o + 1], data[o + 2])) { redLeft = true; break; }
     }
-    if (redLeft && maxx - minx < 0.45 * W && y1 - y0 < 0.12 * H && inkRows(y1 + 1, bottom) >= 12) { top = y1 + 1; notes.push('header line'); }
+    if (redLeft && maxx - minx < 0.45 * W && y1 - y0 < Math.max(40, 0.06 * H) && inkRows(y1 + 1, bottom) >= 12) { top = y1 + 1; notes.push('header line'); }
   }
   y0 = firstInk(top, bottom);
   if (y0 < 0) return { crop: null, notes: ['no content found, left unchanged'] };
-  let y1 = y0; for (let y = bottom - 1; y >= y0; y--) if (ic[y] >= 2) { y1 = y; break; }
+  let y1 = y0; for (let y = bottom - 1; y >= y0; y--) if (ic[y] >= 2 && !inBand[y]) { y1 = y; break; }
 
   const cc = new Int32Array(W);
   for (let y = y0; y <= y1; y++) { let o = y * W * 3; for (let x = 0; x < W; x++, o += 3) if (inkPx(data[o], data[o + 1], data[o + 2])) cc[x]++; }
   let x0 = 0, x1 = W - 1; while (x0 < W - 1 && cc[x0] < 2) x0++; while (x1 > x0 && cc[x1] < 2) x1--;
-  return { crop: { left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 }, notes };
+  const crop = { left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+  return { crop, notes, removedPct: Math.round(100 * (H - crop.height) / H) };
 }
 
 // ---------- file handling ----------
@@ -99,7 +114,7 @@ async function main() {
   if (!sharp) { console.error('The image library "sharp" is missing. Run run-clean-images.bat (it installs it), or: npm install sharp'); process.exit(2); }
   const root = 'qimages';
   if (!fs.existsSync(root)) { console.error('Run this from the site folder, next to index.html and the qimages folder.'); process.exit(2); }
-  const PREVIEW = Number(process.env.PREVIEW || 0), SCALE = Number(process.env.SCALE || 2), ORIG = 'qimages_original', PREV = 'qimages_preview';
+  const PREVIEW = Number(process.env.PREVIEW || 0), SCALE = Number(process.env.SCALE || 2), ORIG = 'qimages_original', PREV = 'qimages_preview', REVIEWDIR = 'qimages_review';
   const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : /\.(webp|png|jpe?g)$/i.test(e.name) ? [path.join(d, e.name)] : []);
   let files = walk(root);
   if (!files.length) { console.error('No pictures found in qimages/.'); process.exit(2); }
@@ -115,7 +130,7 @@ async function main() {
     try {
       const buf = fs.readFileSync(src);
       const { data, info } = await sharp(buf).flatten({ background: '#ffffff' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-      const { crop, notes } = analyze(data, info.width, info.height);
+      const { crop, notes, removedPct = 0 } = analyze(data, info.width, info.height);
       let img = sharp(buf).flatten({ background: '#ffffff' });
       if (crop) img = img.extract(crop);
       const w = crop ? crop.width : info.width, pad = Math.max(10, Math.round(w * 0.012));
@@ -130,7 +145,16 @@ async function main() {
       fs.writeFileSync(outPath, await img.toBuffer());
       stat.done++; if (notes.some(n => /banner cut|banner$/.test(n)) ) stat.banner++; if (notes.includes('header line')) stat.header++;
       if (!notes.length) stat.unchanged++;
-      if (notes.some(n => /skipped|unchanged/.test(n))) report.push(`${rel}: ${notes.join(', ')}`);
+      if (notes.some(n => /skipped|unchanged|REVIEW|kept/.test(n))) report.push(`${rel}: ${notes.join(', ')}`);
+      if (!PREVIEW && crop && removedPct > 12 && notes.some(n => /(top|bottom) banner|header line|REVIEW/.test(n))) {   // check these by eye: the original on the left, the cleaned picture on the right
+        report.push(`${rel}: ${removedPct}% of the height was removed (${notes.join(', ') || 'trim'}) - see ${REVIEWDIR}/`);
+        try {
+          const a = await sharp(buf).flatten({ background: '#ffffff' }).resize({ width: 640 }).png().toBuffer(), c = await sharp(await img.toBuffer()).resize({ width: 640 }).png().toBuffer();
+          const ha = (await sharp(a).metadata()).height, hc = (await sharp(c).metadata()).height, hh = Math.max(ha, hc);
+          const sheet = await sharp({ create: { width: 1300, height: hh, channels: 3, background: '#cfd6e4' } }).composite([{ input: a, left: 0, top: 0 }, { input: c, left: 660, top: 0 }]).png().toBuffer();
+          const rp = path.join(REVIEWDIR, rel.replace(/\.[^.]+$/, '') + '.png'); fs.mkdirSync(path.dirname(rp), { recursive: true }); fs.writeFileSync(rp, sheet);
+        } catch {}
+      }
     } catch (e) { stat.failed++; report.push(`${rel}: FAILED ${e.message}`); }
     if (stat.done % 50 === 0 && stat.done) process.stdout.write(`  ${stat.done}/${files.length}\r`);
   };
@@ -139,7 +163,7 @@ async function main() {
   console.log(`\nDone: ${stat.done} pictures. Banners/strips removed from ${stat.banner}, header line removed from ${stat.header}, ${stat.failed} failed.`);
   if (report.length) { fs.writeFileSync('clean-report.txt', report.join('\n') + '\n'); console.log(`${report.length} notes written to clean-report.txt`); }
   if (PREVIEW) console.log(`Samples are in ${PREV}/ . Nothing in qimages/ was changed.`);
-  else console.log(`Originals are saved in ${ORIG}/ (do not upload that folder). To undo, copy them back into qimages/.`);
+  else console.log(`Originals are saved in ${ORIG}/ (do not upload that folder). To undo, copy them back into qimages/.\nPictures that lost more than 12% are listed in clean-report.txt, with before/after sheets in ${REVIEWDIR}/ (do not upload that folder either).`);
   process.exit(stat.failed ? 1 : 0);
 }
 if (import.meta.url === new URL(process.argv[1], 'file://').href || process.argv[1]?.endsWith('Clean-Images.mjs')) main();

@@ -1,4 +1,4 @@
-// Cloudflare Worker: the tutor behind the "Give me a hint" and "Explain all options" buttons.
+// Cloudflare Worker: the tutor behind the hint, explanation and chat buttons (optional upgrade, so visitors need no sign-in).
 // It keeps your Gemini key secret on the server, so visitors never see or enter a key.
 //
 // Setup (Cloudflare dashboard, free plan is enough):
@@ -34,6 +34,15 @@ Formatting rules for both modes, because your reply is rendered:
 - For graphs and diagrams, describe them precisely (axes, intercepts, slopes, shape, key points), add a small table of values where useful, and a simple ASCII sketch in a fenced code block if it helps.
 - Use bold for key terms and short paragraphs. In FULL mode be thorough and complete rather than brief.`;
 
+const CHAT_SYS = String.raw`You are the GATE DA assistant on the Gategrind practice site. GATE DA is the Data Science and Artificial Intelligence paper of the GATE exam in India. Help students with: the syllabus (Probability and Statistics, Linear Algebra, Calculus and Optimization, Programming with Data Structures and Algorithms, Database Management and Warehousing, Machine Learning, Artificial Intelligence, General Aptitude), solving and explaining problems, formulas and shortcuts, exam pattern and marking (a wrong MCQ costs one third of the marks on a 1-mark question and two thirds on a 2-mark question; MSQ and NAT have no negative marking), preparation strategy, study plans and revision, and discussion of previous year questions.
+
+Rules:
+- Stay on GATE DA and the maths, computer science and AI behind it. If the request is unrelated, say briefly that you only help with GATE DA and suggest a related topic.
+- Be accurate. For official details that can change (exam dates, cutoffs, syllabus changes, eligibility, fees, rules), say you may be out of date and tell the student to confirm on the official GATE website of the organising institute. Never invent facts, statistics, ranks or sources.
+- Teach step by step. Keep answers focused and as short as the question allows; go deep only when asked.
+- If the student attached the question they are viewing, use it, and refer to it directly.
+- Write all mathematics in LaTeX: inline as $x^2$ and display as $$ ... $$. Use Markdown tables where a table helps and fenced code blocks for code or pseudocode.`;
+
 const MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -52,9 +61,9 @@ export default {
 
     let b;
     try { b = await req.json(); } catch { return send({ error: 'Bad request' }, 400); }
-    if (b.mode !== 'hint' && b.mode !== 'full') return send({ error: 'Bad request' }, 400);
+    if (b.mode !== 'hint' && b.mode !== 'full' && b.mode !== 'chat') return send({ error: 'Bad request' }, 400);
     const img = b.image && typeof b.image.data === 'string' && b.image.data.length < 2_000_000 ? b.image : null;
-    if (!img && !b.text) return send({ error: 'No question was sent.' }, 400);
+    if (b.mode !== 'chat' && !img && !b.text) return send({ error: 'No question was sent.' }, 400);
 
     if (env.RL) {
       const ip = req.headers.get('CF-Connecting-IP') || 'x', day = new Date().toISOString().slice(0, 10), k = ip + ':' + day;
@@ -63,6 +72,21 @@ export default {
       await env.RL.put(k, String(n + 1), { expirationTtl: 90000 });
     }
 
+    let body;
+    if (b.mode === 'chat') {
+      const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-12)
+        .map(x => ({ role: x && x.role === 'assistant' ? 'model' : 'user', parts: [{ text: clip(x && x.content, 4000) }] }))
+        .filter(x => x.parts[0].text);
+      if (!msgs.length || msgs[msgs.length - 1].role !== 'user') return send({ error: 'Bad request' }, 400);
+      const last = msgs[msgs.length - 1], mt = b.meta;
+      if (mt) {
+        last.parts[0].text = 'The student is viewing this question (' + clip(mt.subject, 80) + ', ' + clip(mt.topic, 120) + ', ' + clip(mt.type, 10) + ', ' + clip(mt.marks, 3) + ' mark(s)).'
+          + (b.student ? ' Their selected answer so far: ' + clip(b.student, 40) + '.' : '') + '\n\n' + last.parts[0].text;
+        if (img) last.parts.push({ inline_data: { mime_type: clip(img.mime_type, 30) || 'image/png', data: img.data } });
+        else if (b.text) last.parts[0].text += '\n\nQuestion:\n' + clip(b.text, 4000);
+      }
+      body = JSON.stringify({ system_instruction: { parts: [{ text: CHAT_SYS }] }, contents: msgs, generationConfig: { maxOutputTokens: 4096 } });
+    } else {
     const m = b.meta || {}, hints = (Array.isArray(b.hints) ? b.hints : []).slice(0, 8).map(h => clip(h, 3000));
     let text = 'Subject: ' + clip(m.subject, 80) + '. Topic: ' + clip(m.topic, 120) + '. Type: ' + clip(m.type, 10) + ', ' + clip(m.marks, 3) + ' mark(s).\n'
       + (b.student ? 'The student submitted: ' + clip(b.student, 40) + '.\n' : '')
@@ -73,11 +97,12 @@ export default {
     if (img) parts.push({ inline_data: { mime_type: clip(img.mime_type, 30) || 'image/png', data: img.data } });
     else parts[0].text += '\n\nQuestion:\n' + clip(b.text, 4000);
 
-    const body = JSON.stringify({
+    body = JSON.stringify({
       system_instruction: { parts: [{ text: SYS }] },
       contents: [{ role: 'user', parts }],
       generationConfig: { maxOutputTokens: b.mode === 'hint' ? 2048 : 8192 },
     });
+    }
 
     let last = 'The tutor is busy right now. Please try again in a moment.';
     for (const model of MODELS) {
