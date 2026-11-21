@@ -3311,12 +3311,10 @@
                     </div>
                     <section class="quick-mix">
                         <div>
-                            <h2>Random mix, no filters</h2>
-                            <p>A shuffled mix of available bank questions and GATE papers.</p>
+                            <h2>Full GATE DA mock paper</h2>
+                            <p>Exact exam pattern: 65 questions, 100 marks, 3 hours. General Aptitude 10 questions (15 marks) plus 55 subject questions (85 marks), with 1-mark and 2-mark questions spread evenly across every subject and topic. Timed, with results at the end.</p>
                         </div>
-                        <div class="quick-actions"><label>Questions<input id="quick-count" type="number" min="1"
-                                    max="100" value="20"></label><button class="primary" id="quick-start">Start random
-                                mix</button></div>
+                        <div class="quick-actions"><button class="primary" id="quick-start">Start full mock paper</button></div>
                     </section>
                     <div class="lower">
                         <div class="lower-card">
@@ -3527,6 +3525,7 @@
                     quickCount,
                     limitedMessage,
                     sessionDescription,
+                    mock,
                     savedAt: Date.now()
                 }))
             } catch {}
@@ -4391,8 +4390,9 @@ Formatting rules for both modes, because your reply is rendered:
         }
 
         function updateSessionClock() {
-            if (mode === 'Timed') $('session-mode').textContent =
-                `◷ Timed mode · ${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`
+            if (mode !== 'Timed') return;
+            const f = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+            $('session-mode').textContent = mock ? `◷ Full mock · ${f(seconds)} / 180:00` : `◷ Timed mode · ${f(seconds)}`
         }
 
         function remember() {
@@ -4404,7 +4404,110 @@ Formatting rules for both modes, because your reply is rendered:
             persistSession()
         }
 
+        /* ---- Full GATE DA mock paper: 65 questions, 100 marks, 3 hours ----
+           General Aptitude: 10 questions = 5 x 1 mark + 5 x 2 marks = 15 marks.
+           Subject paper:    55 questions = 25 x 1 mark + 30 x 2 marks = 85 marks.
+           MOCK_PLAN = [number of 1-mark questions, number of 2-mark questions] per subject.
+           Edit the numbers to change the weightage (keep the totals at 5/5 for GA and 25/30 for the rest). */
+        let mock = false;
+        const MOCK_SECONDS = 3 * 60 * 60,
+            MOCK_PLAN = {
+                ga: [5, 5],
+                probability_statistics: [4, 5],
+                linear_algebra: [4, 3],
+                calculus_optimization: [3, 3],
+                dsa: [3, 5],
+                dbms: [4, 3],
+                ml: [4, 6],
+                ai: [3, 5]
+            };
+
+        /* picks n questions of one mark value from one subject, always taking from the topic used least so far */
+        function mockPick(sid, marks, n, usedIds, topicUse) {
+            let pool = bank.filter(q => subjectOf(q) === sid && +q.marks === marks && !usedIds.has(q.id));
+            const out = [];
+            while (out.length < n && pool.length) {
+                const topics = [...new Set(pool.map(q => q.topic))],
+                    use = t => topicUse[sid + '|' + t] || 0,
+                    min = Math.min(...topics.map(use)),
+                    cand = topics.filter(t => use(t) === min),
+                    t = cand[Math.floor(Math.random() * cand.length)],
+                    group = pool.filter(q => q.topic === t),
+                    q = group[Math.floor(Math.random() * group.length)];
+                out.push(q);
+                usedIds.add(q.id);
+                topicUse[sid + '|' + t] = use(t) + 1;
+                pool = pool.filter(x => x !== q)
+            }
+            return out
+        }
+
+        function buildMockPaper() {
+            const used = new Set(),
+                tu = {},
+                g1 = [],
+                g2 = [],
+                d1 = [],
+                d2 = [];
+            for (const [sid, [n1, n2]] of Object.entries(MOCK_PLAN)) {
+                const a = mockPick(sid, 1, n1, used, tu),
+                    b = mockPick(sid, 2, n2, used, tu);
+                if (sid === 'ga') {
+                    g1.push(...a);
+                    g2.push(...b)
+                } else {
+                    d1.push(...a);
+                    d2.push(...b)
+                }
+            }
+            /* same order as the real paper: GA 1-mark, GA 2-mark, then subject 1-mark, then subject 2-mark */
+            return [...shuffleQuestions(g1), ...shuffleQuestions(g2), ...shuffleQuestions(d1), ...shuffleQuestions(d2)]
+        }
+
+        function tick() {
+            seconds++;
+            updateSessionClock();
+            persistSession();
+            updateResumeUI();
+            if (mock && seconds >= MOCK_SECONDS) finish()
+        }
+
+        function startMock() {
+            const paper = buildMockPaper(),
+                marks = paper.reduce((a, q) => a + (+q.marks || 0), 0);
+            mock = true;
+            mode = 'Timed';
+            document.querySelectorAll('.mode button').forEach(x => x.classList.toggle('active', x.dataset.mode ===
+                'Timed'));
+            selected = [];
+            selectedTopics = [];
+            renderSubjects();
+            renderTopics();
+            questions = paper;
+            limitedMessage = paper.length === 65 && marks === 100 ? '' :
+                `The bank could not fill the full pattern: ${paper.length} questions, ${marks} marks.`;
+            answers = {};
+            checked = {};
+            index = 0;
+            seconds = 0;
+            sessionDescription =
+                `Full GATE DA mock paper · ${paper.length} questions · ${marks} marks · General Aptitude 15 + Subject 85 · 3 hours`;
+            activeSession = paper.length > 0;
+            clearInterval(timer);
+            show('session');
+            updateSessionClock();
+            renderQuestion();
+            if (activeSession) {
+                persistSession();
+                timer = setInterval(tick, 1000)
+            } else {
+                clearSession();
+                $('next').disabled = true
+            }
+        }
+
         function start(quick = false) {
+        mock = false;
             let pool = bank.filter(q => (quick || !selected.length || selected.includes(subjectOf(q))) && (quick || !
                     selectedTopics.length || selectedTopics.includes(q.topic))),
                 requested = Math.min(100, Math.max(1, Number(quick ? quickCount : count) || 1));
@@ -4432,12 +4535,7 @@ Formatting rules for both modes, because your reply is rendered:
             renderQuestion();
             if (activeSession) {
                 persistSession();
-                if (mode === 'Timed') timer = setInterval(() => {
-                    seconds++;
-                    updateSessionClock();
-                    persistSession();
-                    updateResumeUI()
-                }, 1000)
+                if (mode === 'Timed') timer = setInterval(tick, 1000)
             } else {
                 clearSession();
                 $('next').disabled = true
@@ -4465,6 +4563,7 @@ Formatting rules for both modes, because your reply is rendered:
                 answers = state.answers && typeof state.answers === 'object' ? state.answers : {};
                 checked = state.checked && typeof state.checked === 'object' ? state.checked : {};
                 mode = state.mode === 'Timed' ? 'Timed' : 'Practice';
+                mock = !!state.mock && mode === 'Timed';
                 seconds = Math.max(0, Number(state.seconds) || 0);
                 if (mode === 'Timed' && state.savedAt) seconds += Math.max(0, Math.floor((Date.now() - Number(state
                     .savedAt)) / 1000));
@@ -4482,15 +4581,9 @@ Formatting rules for both modes, because your reply is rendered:
                     .textContent) === count));
                 document.querySelectorAll('.mode button').forEach(b => b.classList.toggle('active', b.dataset.mode ===
                     mode));
-                $('quick-count').value = quickCount;
                 $('session-mode').textContent = mode === 'Timed' ? '◷ Timed mode · 00:00' : 'Practice mode';
                 updateSessionClock();
-                if (mode === 'Timed') timer = setInterval(() => {
-                    seconds++;
-                    updateSessionClock();
-                    persistSession();
-                    updateResumeUI()
-                }, 1000);
+                if (mode === 'Timed') timer = setInterval(tick, 1000);
                 updateResumeUI()
             } catch {
                 try {
@@ -4575,11 +4668,7 @@ Formatting rules for both modes, because your reply is rendered:
             selectedTopics = [];
             renderTopics()
         };
-        $('quick-count').oninput = () => {
-            quickCount = Math.min(100, Math.max(1, Number($('quick-count').value) || 1));
-            $('quick-count').value = quickCount
-        };
-        $('quick-start').onclick = () => start(true);
+        $('quick-start').onclick = startMock;
         $('next').onclick = () => {
             if (!questions.length) return;
             remember();
