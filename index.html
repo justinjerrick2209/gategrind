@@ -2907,6 +2907,172 @@
             overflow-y: auto;
             padding: 2px 2px 4px
         }
+
+        /* ===== slide-away sidebar + big focus layout for practice sessions ===== */
+        .sidebar {
+            z-index: 40;
+            transition: transform .28s ease
+        }
+
+        main {
+            transition: margin-left .28s ease
+        }
+
+        body.side-hidden .sidebar {
+            transform: translateX(-100%);
+            box-shadow: none
+        }
+
+        body.side-hidden main {
+            margin-left: 0
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 30
+        }
+
+        .side-toggle {
+            width: 36px;
+            height: 36px;
+            margin-right: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--ink);
+            font-size: 19px;
+            line-height: 1;
+            vertical-align: middle;
+            box-shadow: 0 3px 0 var(--edge)
+        }
+
+        .side-toggle:hover {
+            border-color: var(--pen)
+        }
+
+        .side-toggle:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 var(--edge)
+        }
+
+        body.in-session .content {
+            max-width: 1440px;
+            padding: 24px 32px 28px
+        }
+
+        #session.page {
+            max-width: 1280px
+        }
+
+        #session .page-title {
+            font-size: 30px
+        }
+
+        #session .lede {
+            font-size: 15px;
+            margin-top: 4px
+        }
+
+        #session .progress {
+            margin: 12px 0
+        }
+
+        #session .layout {
+            grid-template-columns: minmax(0, 1fr) 300px;
+            gap: 20px
+        }
+
+        #session .question {
+            padding: 28px 32px
+        }
+
+        #session .layout>aside.question {
+            position: sticky;
+            top: 84px;
+            padding: 20px 18px
+        }
+
+        #session .layout>aside .meta {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--ink)
+        }
+
+        #session .number-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 14px;
+            max-height: calc(100vh - 230px);
+            overflow-y: auto;
+            padding: 3px 3px 6px
+        }
+
+        #session .number-grid button {
+            height: 46px;
+            font-size: 16px;
+            font-weight: 600
+        }
+
+        #session .qmeta .chip {
+            font-size: 15px;
+            padding: 6px 14px
+        }
+
+        #session .qmeta .qno,
+        #session .crumbs {
+            font-size: 15px
+        }
+
+        #session .opt-label {
+            font-size: 15px
+        }
+
+        #session .opts .opt.opt-row {
+            min-height: 64px;
+            font-size: 19px
+        }
+
+        #session .opt-row b {
+            font-size: 16px
+        }
+
+        #session .check-row .primary,
+        #session .check-row .secondary {
+            font-size: 16px;
+            padding: 12px 22px
+        }
+
+        #session .session-bottom .primary,
+        #session .session-bottom .secondary {
+            font-size: 16px;
+            padding: 12px 24px
+        }
+
+        @media(max-width:850px) {
+            #session .layout {
+                grid-template-columns: 1fr
+            }
+
+            #session .layout>aside.question {
+                position: static
+            }
+
+            #session .number-grid {
+                grid-template-columns: repeat(8, 1fr);
+                max-height: 260px
+            }
+
+            body.in-session .content {
+                padding: 20px 14px
+            }
+        }
+
+        @media(max-width:620px) {
+            .side-toggle {
+                display: none
+            }
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -2930,7 +3096,7 @@
                         space</small></span><button class="theme" id="theme" title="Toggle dark theme">☾</button></div>
         </aside>
         <main>
-            <header class="topbar"><span>GATE DA &nbsp;›&nbsp; <b id="crumb">Practice studio</b></span><span
+            <header class="topbar"><span><button class="side-toggle" id="side-toggle" title="Show / hide sidebar" aria-label="Show or hide sidebar">☰</button>GATE DA &nbsp;›&nbsp; <b id="crumb">Practice studio</b></span><span
                     class="exam-countdown-pill" id="exam-countdown" aria-live="polite"></span><span class="status"><b
                         id="bank-status">1,415 questions ready</b></span></header>
             <div class="content">
@@ -3243,8 +3409,28 @@
             renderQuestion()
         }
 
+        let autoHid = false;
+
+        function setSide(hidden, manual) {
+            document.body.classList.toggle('side-hidden', hidden);
+            if (manual) {
+                autoHid = false;
+                try {
+                    localStorage.setItem('gategrind-side', hidden ? '1' : '0')
+                } catch {}
+            }
+        }
+
         function show(page) {
             if (currentPage === 'session' && page !== 'session') remember();
+            if (page === 'session' && currentPage !== 'session') {
+                autoHid = !document.body.classList.contains('side-hidden');
+                if (autoHid) setSide(true, false)
+            } else if (page !== 'session' && currentPage === 'session' && autoHid) {
+                setSide(false, false);
+                autoHid = false
+            }
+            document.body.classList.toggle('in-session', page === 'session');
             currentPage = page;
             ['home', 'session', 'review', 'library', 'saved'].forEach(p => $(p).classList.toggle('hide', p !== page));
             $('crumb').textContent = page === 'home' ? 'Practice studio' : page === 'session' ? 'Practice session' :
@@ -3611,7 +3797,7 @@ Formatting rules for both modes, because your reply is rendered:
             IMG_HI = 228,
             IMG_PAD = 8,
             IMG_SCALE = 2,
-            IMG_ZOOM = 1.3;
+            IMG_ZOOM = 1.6;
         const IMG = (src, alt, cls) => `<img src="${esc(src)}" alt="${alt}" class="${cls||''}" loading="lazy">`;
 
         function qHTML(q) {
@@ -4168,6 +4354,31 @@ Formatting rules for both modes, because your reply is rendered:
                 'light')
         };
         if (localStorage.getItem('gategrind-theme') === 'dark') document.documentElement.classList.add('dark');
+        $('side-toggle').onclick = () => setSide(!document.body.classList.contains('side-hidden'), true);
+        try {
+            if (localStorage.getItem('gategrind-side') === '1') setSide(true, false)
+        } catch {}
+        (() => {
+            let sx = 0,
+                sy = 0;
+            document.addEventListener('touchstart', e => {
+                sx = e.touches[0].clientX;
+                sy = e.touches[0].clientY
+            }, {
+                passive: true
+            });
+            document.addEventListener('touchend', e => {
+                if (window.innerWidth <= 620) return;
+                const t = e.changedTouches[0],
+                    dx = t.clientX - sx,
+                    dy = t.clientY - sy;
+                if (Math.abs(dy) > 60 || Math.abs(dx) < 80) return;
+                if (dx < 0) setSide(true, true);
+                else if (sx < 40) setSide(false, true)
+            }, {
+                passive: true
+            })
+        })();
         $('bank-status').textContent = `${bank.length.toLocaleString()} questions ready`;
         $('bank-stat-count').textContent = bank.length.toLocaleString();
         $('bank-stat-topics').textContent = new Set(bank.map(q => subjectOf(q) + '|' + q.topic)).size;
