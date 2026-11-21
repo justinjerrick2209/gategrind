@@ -3172,6 +3172,58 @@
                 overflow-x: auto
             }
         }
+
+        /* ===== wider content, especially when the sidebar is hidden ===== */
+        .content {
+            max-width: 1120px
+        }
+
+        .page {
+            max-width: 1000px
+        }
+
+        body.side-hidden .content {
+            max-width: 1500px;
+            padding-left: 56px;
+            padding-right: 56px
+        }
+
+        body.side-hidden .page {
+            max-width: 1320px
+        }
+
+        body.side-hidden #session.page {
+            max-width: 1440px
+        }
+
+        body.side-hidden .intro p,
+        body.side-hidden .lede {
+            max-width: 90ch
+        }
+
+        body.side-hidden .counts button {
+            height: 40px
+        }
+
+        @media(min-width:1100px) {
+            body.side-hidden .subjects {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px
+            }
+
+            body.side-hidden .subject {
+                min-height: 88px
+            }
+        }
+
+        @media(max-width:850px) {
+
+            body.side-hidden .content,
+            body.in-session .content {
+                padding-left: 18px;
+                padding-right: 18px
+            }
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
