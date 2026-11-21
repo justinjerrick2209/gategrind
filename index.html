@@ -2900,6 +2900,13 @@
         body {
             padding-bottom: 76px
         }
+
+        /* 100-question sessions: keep the question navigator scrollable */
+        .number-grid {
+            max-height: 420px;
+            overflow-y: auto;
+            padding: 2px 2px 4px
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -2969,7 +2976,7 @@
                                 <p class="hint">Choose a topic or practise a mix.</p>
                             </div>
                             <div class="field">
-                                <div class="field-head"><strong>Number of questions</strong><small>10 — 65</small></div>
+                                <div class="field-head"><strong>Number of questions</strong><small>10 — 100</small></div>
                                 <div class="counts" id="counts"></div>
                                 <p class="hint">Choose your session length.</p>
                             </div>
@@ -2991,7 +2998,7 @@
                             <p>A shuffled mix of available bank questions and GATE papers.</p>
                         </div>
                         <div class="quick-actions"><label>Questions<input id="quick-count" type="number" min="1"
-                                    max="65" value="20"></label><button class="primary" id="quick-start">Start random
+                                    max="100" value="20"></label><button class="primary" id="quick-start">Start random
                                 mix</button></div>
                     </section>
                     <div class="lower">
@@ -3940,7 +3947,7 @@ Formatting rules for both modes, because your reply is rendered:
         function start(quick = false) {
             let pool = bank.filter(q => (quick || !selected.length || selected.includes(subjectOf(q))) && (quick || !
                     selectedTopics.length || selectedTopics.includes(q.topic))),
-                requested = Math.min(65, Math.max(1, Number(quick ? quickCount : count) || 1));
+                requested = Math.min(100, Math.max(1, Number(quick ? quickCount : count) || 1));
             pool = shuffleQuestions(pool);
             questions = pool.slice(0, requested);
             limitedMessage = pool.length < requested ? (pool.length ?
@@ -4004,8 +4011,8 @@ Formatting rules for both modes, because your reply is rendered:
                 selected = Array.isArray(state.selected) ? state.selected.filter(id => subjects.some(s => s[0] ===
                     id)) : [];
                 selectedTopics = Array.isArray(state.selectedTopics) ? state.selectedTopics : [];
-                count = Math.min(65, Math.max(10, Number(state.count) || 20));
-                quickCount = Math.min(65, Math.max(1, Number(state.quickCount) || 20));
+                count = Math.min(100, Math.max(10, Number(state.count) || 20));
+                quickCount = Math.min(100, Math.max(1, Number(state.quickCount) || 20));
                 limitedMessage = typeof state.limitedMessage === 'string' ? state.limitedMessage : '';
                 sessionDescription = typeof state.sessionDescription === 'string' ? state.sessionDescription :
                     `${questions.length} questions · Resumed practice session`;
@@ -4075,7 +4082,7 @@ Formatting rules for both modes, because your reply is rendered:
                 `<article class="item"><span class="item-meta">${esc(q.subject)} · ${esc(q.topic)}</span><a class="library-preview-link saved-question-image" href="${esc(q.image)}" target="_blank" rel="noreferrer"><img class="library-preview-image" src="${esc(q.image)}" alt="Saved question with original diagrams and formulas" loading="lazy"></a><details><summary>Solution</summary><p class="answer">${esc(q.answer)}</p>${(q.solutionImages||[]).map(src=>`<img class="review-visual" src="${esc(src)}" alt="Worked solution" loading="lazy">`).join('')}</details><button class="secondary" onclick="save(bank.find(x=>x.id==='${q.id}'))">Remove saved question</button></article>`
                 ).join('') : '<p class="lede">Bookmark questions while you practise and find them waiting here.</p>'
         }
-        for (let n = 10; n <= 65; n += 5) {
+        [10, 20, 30, 40, 50, 65, 75, 100].forEach(n => {
             let b = document.createElement('button');
             b.textContent = n;
             b.className = n === count ? 'active' : '';
@@ -4085,7 +4092,7 @@ Formatting rules for both modes, because your reply is rendered:
                     .textContent === n))
             };
             $('counts').appendChild(b)
-        }
+        });
         $('select-all').onclick = () => {
             selected = selected.length === subjects.length ? [] : subjects.map(s => s[0]);
             renderSubjects();
@@ -4109,7 +4116,7 @@ Formatting rules for both modes, because your reply is rendered:
             renderTopics()
         };
         $('quick-count').oninput = () => {
-            quickCount = Math.min(65, Math.max(1, Number($('quick-count').value) || 1));
+            quickCount = Math.min(100, Math.max(1, Number($('quick-count').value) || 1));
             $('quick-count').value = quickCount
         };
         $('quick-start').onclick = () => start(true);
