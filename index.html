@@ -3578,6 +3578,148 @@
         }
         /* ---- Tutor (hints and explanations). The key lives on the server, see worker.js ---- */
         const GEMINI_ENDPOINT = 'https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev';
+        /* ---- Round-robin AI pool: every request goes to the next model in the list; models that are
+           rate limited or missing rest for a while, so the free limits are rarely reached.
+           v:1 = can read images (most questions are images), v:0 = text only.
+           Order matters: neighbours are from different companies. Edit this list freely. ---- */
+        const AI_POOL = [{
+                id: 'google/gemini-3.7-flash',
+                v: 1
+            }, {
+                id: 'gpt-5-nano',
+                v: 1
+            }, {
+                id: 'claude-haiku-4-5',
+                v: 1
+            }, {
+                id: 'x-ai/grok-4-fast',
+                v: 1
+            }, {
+                id: 'google/gemini-3.6-flash',
+                v: 1
+            }, {
+                id: 'gpt-5-mini',
+                v: 1
+            }, {
+                id: 'mistralai/mistral-small-3.2-24b-instruct',
+                v: 1
+            }, {
+                id: 'google/gemini-3.5-flash-lite',
+                v: 1
+            }, {
+                id: 'deepseek/deepseek-chat',
+                v: 0
+            }],
+            AIRR = (() => {
+                const CK = 'gategrind-ai-cool-v1',
+                    PK = 'gategrind-ai-ptr-v1';
+                let cool = {},
+                    ptr = 0,
+                    avail = null,
+                    loading = null;
+                try {
+                    cool = JSON.parse(localStorage.getItem(CK) || '{}')
+                } catch {}
+                try {
+                    ptr = +localStorage.getItem(PK) || 0
+                } catch {}
+                const save = () => {
+                        try {
+                            localStorage.setItem(CK, JSON.stringify(cool));
+                            localStorage.setItem(PK, String(ptr))
+                        } catch {}
+                    },
+                    last = id => String(id).split('/').pop(),
+                    has = id => !avail || avail.some(a => a === id || last(a) === last(id));
+                return {
+                    ready() {
+                        if (!loading) loading = (async () => {
+                            try {
+                                const l = await puter.ai.listModels();
+                                avail = (Array.isArray(l) ? l : []).map(m => String(typeof m === 'string' ?
+                                    m : (m && (m.id || m.name)) || '')).filter(Boolean);
+                                if (!avail.length) avail = null
+                            } catch {
+                                avail = null
+                            }
+                        })();
+                        return loading
+                    },
+                    order(vision) {
+                        let pool = AI_POOL.filter(m => !vision || m.v);
+                        const known = pool.filter(m => has(m.id));
+                        if (known.length) pool = known;
+                        const s = ptr % pool.length,
+                            now = Date.now();
+                        ptr++;
+                        save();
+                        const rot = pool.slice(s).concat(pool.slice(0, s));
+                        return rot.filter(m => (cool[m.id] || 0) <= now).concat(rot.filter(m => (cool[m.id] || 0) >
+                            now)).slice(0, 6)
+                    },
+                    bad(id, msg) {
+                        const t = String(msg || '');
+                        const ms = /not found|unknown model|invalid model|no.?implementation|unsupported|not available|404/i
+                            .test(t) ? 6 * 3600e3 :
+                            /429|rate|quota|limit|credit|fund|exhaust|too many|insufficient/i.test(t) ? 10 * 60e3 :
+                            45e3;
+                        cool[id] = Date.now() + ms;
+                        save()
+                    },
+                    ok(id) {
+                        if (cool[id]) {
+                            delete cool[id];
+                            save()
+                        }
+                    },
+                    status() {
+                        const now = Date.now();
+                        return AI_POOL.map(m => ({
+                            model: m.id,
+                            vision: !!m.v,
+                            installed: has(m.id),
+                            resting_seconds: Math.max(0, Math.round(((cool[m.id] || 0) - now) / 1000))
+                        }))
+                    }
+                }
+            })();
+        window.aiPoolStatus = () => AIRR.ready().then(() => console.table(AIRR.status()));
+        async function aiCall(prompt, file, onPart) {
+            await AIRR.ready();
+            let lastErr = new Error('The tutor is busy right now. Please try again in a moment.');
+            for (const m of AIRR.order(!!file)) {
+                try {
+                    const o = {
+                            model: m.id
+                        },
+                        stream = typeof onPart === 'function';
+                    if (stream) o.stream = true;
+                    const r = await (file ? puter.ai.chat(prompt, file, false, o) : puter.ai.chat(prompt, o));
+                    let out = '';
+                    if (r && typeof r[Symbol.asyncIterator] === 'function') {
+                        for await (const part of r) {
+                            out += (part && part.text) || '';
+                            if (stream) onPart(out)
+                        }
+                    } else {
+                        const c = r && r.message ? r.message.content : r;
+                        out = Array.isArray(c) ? c.map(x => x.text || '').join('') : String(c || '')
+                    }
+                    out = out.trim();
+                    if (out) {
+                        AIRR.ok(m.id);
+                        return out
+                    }
+                    AIRR.bad(m.id, 'empty')
+                } catch (e) {
+                    const msg = (e && (e.message || (e.error && e.error.message) || e.code || (typeof e ===
+                        'string' ? e : ''))) || JSON.stringify(e || '');
+                    lastErr = new Error(msg || 'The tutor is unavailable right now.');
+                    AIRR.bad(m.id, msg)
+                }
+            }
+            throw lastErr
+        }
         let gcache = {};
         try {
             gcache = JSON.parse(localStorage.getItem('gategrind-tutor-cache-v1') || '{}')
@@ -3691,26 +3833,7 @@ Formatting rules for both modes, because your reply is rendered:
                     type: img.mime_type
                 })
             }
-            let last = new Error('The tutor is unavailable right now.');
-            for (const model of ['google/gemini-3.7-flash', 'google/gemini-3.6-flash',
-                    'google/gemini-3.5-flash-lite'
-                ]) {
-                try {
-                    const r = await (file ? puter.ai.chat(prompt, file, false, {
-                            model
-                        }) : puter.ai.chat(prompt, {
-                            model
-                        })),
-                        c = r && r.message ? r.message.content : r,
-                        t = (Array.isArray(c) ? c.map(x => x.text || '').join('') : String(c || '')).trim();
-                    if (t) return t;
-                    last = new Error('The tutor returned an empty answer.')
-                } catch (e) {
-                    last = new Error((e && (e.message || (e.error && e.error.message))) ||
-                        'The tutor is unavailable right now.')
-                }
-            }
-            throw last
+            return aiCall(prompt, file)
         }
         const tutorOwnerPays = () => !/YOUR-WORKER/.test(GEMINI_ENDPOINT);
         async function gemRun(qid, m, id) {
@@ -4509,33 +4632,7 @@ Rules:
                     type: img.mime_type
                 })
             }
-            let last = new Error('The assistant is unavailable right now.');
-            for (const model of CHAT_MODELS) {
-                try {
-                    const o = {
-                            model,
-                            stream: true
-                        },
-                        r = await (file ? puter.ai.chat(prompt, file, false, o) : puter.ai.chat(prompt, o));
-                    let out = '';
-                    if (r && typeof r[Symbol.asyncIterator] === 'function') {
-                        for await (const part of r) {
-                            out += (part && part.text) || '';
-                            onPart(out)
-                        }
-                    } else {
-                        const c = r && r.message ? r.message.content : r;
-                        out = Array.isArray(c) ? c.map(x => x.text || '').join('') : String(c || '')
-                    }
-                    out = out.trim();
-                    if (out) return out;
-                    last = new Error('The assistant returned an empty answer.')
-                } catch (e) {
-                    last = new Error((e && (e.message || (e.error && e.error.message))) ||
-                        'The assistant is unavailable right now.')
-                }
-            }
-            throw last
+            return aiCall(prompt, file, onPart)
         }
         async function chatSend(t) {
             if (chatBusy) return;
