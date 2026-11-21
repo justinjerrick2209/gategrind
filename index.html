@@ -3073,6 +3073,105 @@
                 display: none
             }
         }
+
+        /* ===== broader chat assistant ===== */
+        .chat-panel {
+            width: min(820px, calc(100vw - 32px));
+            height: min(820px, calc(100vh - 32px));
+            right: 16px;
+            bottom: 16px
+        }
+
+        .chat-log {
+            padding: 20px 24px;
+            gap: 16px
+        }
+
+        .msg {
+            max-width: 96%;
+            padding: 14px 18px;
+            font-size: 16px;
+            line-height: 1.7
+        }
+
+        .msg.u {
+            max-width: 80%
+        }
+
+        .msg.a table {
+            display: table;
+            width: 100%;
+            table-layout: auto;
+            font-size: 15px
+        }
+
+        .msg.a th,
+        .msg.a td {
+            padding: 7px 12px;
+            vertical-align: top;
+            word-break: normal;
+            overflow-wrap: break-word
+        }
+
+        .msg.a th {
+            background: var(--card);
+            color: var(--ink)
+        }
+
+        .msg.a pre {
+            font-size: 14px
+        }
+
+        .chat-panel header {
+            padding: 16px 20px 14px 24px
+        }
+
+        .chat-panel header strong {
+            font-size: 17px
+        }
+
+        .chat-attach {
+            padding: 10px 24px 0;
+            font-size: 14px
+        }
+
+        .chat-in {
+            padding: 12px 24px
+        }
+
+        .chat-in textarea {
+            font-size: 16px;
+            padding: 12px 14px;
+            min-height: 48px;
+            overflow-y: auto
+        }
+
+        .chat-foot {
+            padding: 0 24px 14px;
+            font-size: 12px
+        }
+
+        @media(max-width:620px) {
+            .chat-panel {
+                width: 100vw;
+                height: 100dvh;
+                right: 0;
+                bottom: 0
+            }
+
+            .chat-log {
+                padding: 14px
+            }
+
+            .msg {
+                font-size: 15px
+            }
+
+            .msg.a table {
+                display: block;
+                overflow-x: auto
+            }
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
