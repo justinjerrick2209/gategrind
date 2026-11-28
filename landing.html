@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gate Zone · GATE DA Practice Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--pen:#60a5fa;--bg:#0b0b0b;--pn:#121212;--ink:#f1ece1;--mut:#a09f9a;--line:rgba(241,236,225,.14);--grid:rgba(241,236,225,.045);--ac:#60a5fa;--mint:#93c5fd;--bad:#ff9a85;
+--serif:'Fraunces',Georgia,serif;--sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/48px 48px;-webkit-mask-image:linear-gradient(#000,transparent 85%);mask-image:linear-gradient(#000,transparent 85%)}
+#bg,.warp,.vig{display:none}
+[hidden]{display:none!important}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+::selection{background:var(--ac);color:#140a06}
+
+/* top bar */
+.top{position:fixed;inset:0 0 auto;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 40px;background:rgba(12,14,19,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px;font:500 22px var(--serif);letter-spacing:-.02em}
+.brand i{display:grid;place-items:center;width:30px;height:30px;background:var(--ac);color:#140a06;font:italic 600 20px var(--serif);border-radius:3px}
+.brand b{font-weight:500;font-style:italic;color:var(--ac)}
+.pill{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);padding:6px 12px;border-radius:99px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 14.5px var(--sans);padding:13px 22px;border-radius:6px;border:1px solid transparent;cursor:pointer;text-decoration:none;transition:transform .18s,box-shadow .18s,border-color .18s,background .18s}
+.btn.p{background:var(--ac);color:#140a06}
+.btn.p:hover{transform:translateY(-1px);box-shadow:0 10px 26px -12px var(--ac)}
+.btn.g{background:transparent;color:var(--ink);border-color:rgba(241,236,225,.3)}
+.btn.g:hover{border-color:var(--ac);color:var(--ac)}
+.btn.sm{padding:8px 14px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:wait}
+.go{width:100%;margin-top:12px}
+.row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+/* layout */
+.wrap{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:64px;max-width:1280px;margin:0 auto;padding:0 40px}
+main{counter-reset:s;min-width:0}
+section{padding-top:112px}
+.hero{padding-top:150px}
+.auth{position:sticky;top:92px;align-self:start;padding:0 0 24px;z-index:2}
+.auth .card{max-height:calc(100vh - 116px);overflow-y:auto;scrollbar-width:none}.auth .card::-webkit-scrollbar{display:none}
+@media(max-height:760px){.auth .card{padding:22px 24px}.auth .card h2{font-size:30px}.auth .card .s{margin:6px 0 14px;font-size:14px}.auth .tabs{margin-bottom:10px}.auth label{margin:10px 0 5px}.auth input{padding:11px 16px}.auth .msg{margin-top:8px}}
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s,transform .7s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none}
+
+/* type */
+.eye{display:flex;align-items:center;gap:12px;font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ac);counter-increment:s}
+.eye::before{content:counter(s,decimal-leading-zero);color:var(--mut)}
+.eye::after{content:"";width:48px;height:1px;background:var(--line)}
+h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.025em;line-height:1.02}
+h1{font-size:clamp(46px,6.2vw,92px);margin:26px 0 24px;letter-spacing:-.04em}
+h1 em,h2 em{font-style:italic;color:var(--ac);font-weight:400}
+h2{font-size:clamp(34px,4.2vw,58px);margin:18px 0 0}
+h3{font-size:22px;line-height:1.2}
+.lede{max-width:56ch;color:var(--mut);font-size:18px;margin-top:20px}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.note{color:var(--mut);font-size:14px;margin-top:18px}
+
+/* hero figure + stats */
+.fig{margin-top:44px;border:1px solid var(--line);background:radial-gradient(var(--line) 1px,transparent 1.2px) 0 0/18px 18px;display:grid;grid-template-columns:1fr auto;align-items:end;gap:10px;padding:14px 20px}
+.fig svg{width:100%;height:auto;max-height:210px;grid-column:1/-1}
+.fig figcaption{font:italic 400 22px var(--serif);color:var(--ink)}
+.fig small{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.fig .path{stroke-dasharray:640;stroke-dashoffset:640;animation:draw 3.4s .6s cubic-bezier(.5,0,.2,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:28px}
+.stat{background:var(--bg);padding:20px 22px}
+.stat b{display:block;font:500 clamp(20px,2.3vw,32px) var(--serif);letter-spacing:-.02em;white-space:nowrap}
+.stat span,.bn span,.pp small,.cd small,.cdband small{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.cd{display:flex;align-items:center;margin-top:20px;border:1px solid var(--line);border-left:3px solid var(--ac);padding:18px 22px}
+.cd b,.cdband b{display:block;font:500 clamp(26px,3vw,38px) var(--mono);letter-spacing:-.03em;margin-top:6px}
+.cd u,.cdband u{text-decoration:none;font-size:.45em;color:var(--mut);margin:0 .5em 0 .12em}
+.trust{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font:500 12.5px var(--mono);color:var(--mut)}
+.trust span:first-letter{color:var(--mint)}
+
+/* ruled grids: cells share hairlines */
+.grid3,.band,.papers,.steps,.types,.subs2{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:44px}
+.grid3,.types{grid-template-columns:repeat(3,1fr)}
+.band,.papers,.steps{grid-template-columns:repeat(4,1fr)}
+.subs2{grid-template-columns:repeat(2,1fr)}
+.f,.bn,.pp,.step,.ty,.sub2{background:var(--bg);padding:30px 28px;transition:background .2s}
+.f:hover,.pp:hover,.step:hover,.ty:hover,.sub2:hover{background:var(--pn)}
+.f p,.pp p,.step p,.ty p{color:var(--mut);font-size:15px;margin-top:10px}
+.ic{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:4px;color:var(--ac);font:500 18px var(--mono);margin-bottom:22px;flex:none}
+.bn b{display:block;font:500 clamp(38px,4.4vw,62px) var(--serif);letter-spacing:-.04em;line-height:1;margin-bottom:10px}
+.pp b{display:block;font:500 56px var(--serif);letter-spacing:-.04em;margin:8px 0 2px}
+.pp.bank b{color:var(--ac)}
+.pp span{font:500 13px var(--mono);color:var(--mint)}
+.step{counter-increment:st}
+.steps{counter-reset:st}
+.step::before{content:counter(st,decimal-leading-zero);display:block;font:500 12px var(--mono);color:var(--ac);letter-spacing:.14em;margin-bottom:34px}
+.sh{display:flex;align-items:center;gap:16px}
+.sh .ic{margin:0}
+.sh span{font:500 12px var(--mono);color:var(--mut);letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
+.chips i{font:500 12px var(--mono);font-style:normal;color:var(--mut);border:1px solid var(--line);padding:5px 10px;border-radius:4px;transition:.15s}
+.chips i:hover{color:var(--ac);border-color:var(--ac)}
+
+/* mock practice window */
+.mock{margin-top:44px;border:1px solid var(--line);background:var(--pn);box-shadow:14px 14px 0 -1px var(--bg),14px 14px 0 0 var(--line)}
+.mk-top{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);font:500 13px var(--mono)}
+.mk-top b{margin-left:10px;font-weight:500}.mk-top em{margin-left:auto;font-style:normal;color:var(--ac)}
+.mk-dot{width:10px;height:10px;border-radius:50%;border:1px solid var(--mut)}
+.mk-body{display:grid;grid-template-columns:1fr 230px}
+.mk-q{padding:26px}
+.mk-side{padding:24px;border-left:1px solid var(--line)}
+.mk-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.mk-meta i{font:500 11px var(--mono);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);padding:4px 9px;border-radius:3px}
+.mk-q p{font:400 21px/1.4 var(--serif);margin-bottom:18px}
+.mk-opt{display:flex;gap:14px;border:1px solid var(--line);padding:11px 14px;margin-top:8px;border-radius:5px;font-size:15px}
+.mk-opt b{font:500 13px var(--mono);color:var(--mut)}
+.mk-opt.on{border-color:var(--ac);background:rgba(59,130,246,.09)}.mk-opt.on b{color:var(--ac)}
+.mk-act{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.mk-side small{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut);display:block;margin:6px 0 14px}
+.mk-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:18px}
+.mk-grid u{display:grid;place-items:center;aspect-ratio:1;text-decoration:none;font:500 11px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:3px}
+.mk-grid u.d{background:rgba(147,197,253,.14);color:var(--mint);border-color:transparent}
+.mk-grid u.x{background:rgba(255,143,128,.14);color:var(--bad);border-color:transparent}
+.mk-grid u.c{border-color:var(--ac);color:var(--ac)}
+.mk-bar{height:4px;background:var(--line);margin-bottom:12px}.mk-bar i{display:block;height:100%;background:var(--ac)}
+
+/* exam pattern */
+.tbl{margin-top:44px;border:1px solid var(--line)}
+.tr{display:grid;grid-template-columns:1fr 130px 130px;padding:17px 24px;border-bottom:1px solid var(--line)}
+.tr:last-child{border:0}
+.tr span:nth-child(n+2){text-align:right;font-family:var(--mono)}
+.th{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.tt{background:var(--pn);font-weight:600;border-top:1px solid var(--ac)}
+.types{margin-top:20px}
+.ty .tb{height:4px;background:var(--line);margin:18px 0 10px}.ty .tb i{display:block;height:100%;background:var(--ac)}
+.ty>span{font:500 12px var(--mono);color:var(--mint)}
+.ty h3{font-size:34px;font-style:italic;font-weight:400}
+
+/* countdown band, faq, final */
+.cdband{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;border:1px solid var(--line);border-left:3px solid var(--ac);padding:30px 34px;background:var(--pn)}
+.cdband-s,.band-s{padding-top:96px}
+.faq{margin-top:40px;border-top:1px solid var(--line)}
+.fq{border-bottom:1px solid var(--line)}
+.fq summary{display:flex;justify-content:space-between;align-items:center;gap:20px;cursor:pointer;list-style:none;padding:24px 4px;font:500 22px var(--serif);letter-spacing:-.015em}
+.fq summary::-webkit-details-marker{display:none}
+.fq summary::after{content:"+";font:300 28px var(--mono);color:var(--ac);transition:transform .25s}
+.fq[open] summary::after{transform:rotate(45deg)}
+.fq p{color:var(--mut);max-width:62ch;padding:0 4px 26px}
+.fin{padding:72px 40px;text-align:center;border:1px solid var(--line);background:radial-gradient(var(--line) 1px,transparent 1.2px) 0 0/20px 20px,var(--pn)}
+.fin h2{margin:0 auto}.fin p{color:var(--mut);margin:18px auto 24px;max-width:46ch}
+footer{margin:80px 0 0;padding:28px 0 44px;border-top:1px solid var(--line);font:500 12px var(--mono);color:var(--mut)}
+
+/* sign-in card */
+.card{background:var(--pn);border:1px solid var(--line);border-top:3px solid var(--ac);border-radius:8px;padding:34px 30px;box-shadow:0 40px 80px -40px #000;transform:none!important}
+.card h2{font-size:36px;margin:0}
+.card .s{color:var(--mut);margin:8px 0 24px;font-size:15px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;padding:3px;margin-bottom:20px}
+.tabs button{font:600 14px var(--sans);color:var(--mut);background:none;border:0;border-radius:4px;padding:9px;cursor:pointer}
+.tabs button.on{background:var(--ink);color:#0f0f0f}
+label{display:block;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:16px 0 7px}
+input{width:100%;font:400 15px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:13px 14px}
+input::placeholder{color:#6f6f6b}input:focus{outline:0;border-color:var(--ac);box-shadow:0 0 0 3px rgba(59,130,246,.2)}
+.msg{min-height:20px;margin-top:12px;font-size:14px;color:var(--bad)}.msg.ok{color:var(--mint)}
+.card .note{margin-top:14px}
+.av{display:grid;place-items:center;width:58px;height:58px;border-radius:4px;background:var(--ac);color:#140a06;font:italic 600 30px var(--serif);margin-bottom:18px}
+.uid{font:500 14px var(--mono);color:var(--ink);margin-top:4px;word-break:break-all}
+.card.flip{animation:fl .35s}@keyframes fl{from{opacity:.4}to{opacity:1}}
+.leave .wrap,.leave .top{opacity:0;transition:opacity .8s}
+
+@media(max-width:1020px){.wrap{grid-template-columns:1fr;gap:0}.auth{position:static;padding-top:80px}.auth .card{max-height:none;overflow:visible}.top{padding:12px 20px}.wrap{padding:0 20px}}
+@media(max-width:760px){.grid3,.types,.subs2,.band,.papers,.steps{grid-template-columns:1fr 1fr}.grid3,.types,.subs2{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.mk-body{grid-template-columns:1fr}.mk-side{border-left:0;border-top:1px solid var(--line)}.tr{grid-template-columns:1fr 80px 80px;padding:14px}.pill{display:none}.hero{padding-top:120px}.fin{padding:48px 20px}}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.fig .path{animation:none;stroke-dashoffset:0}html{scroll-behavior:auto}}
+
+/* ===== shape language: capsules, arches, circles, leaf + bubble corners, hexagons ===== */
+:root{--ac2:#3b82f6;--vio:#2563eb;--pn:#121212;--gr:linear-gradient(120deg,#60a5fa 0%,#3b82f6 58%,#2563eb 100%);--hex:polygon(25% 4%,75% 4%,100% 50%,75% 96%,25% 96%,0 50%)}
+body::after{content:"";position:fixed;inset:-10%;z-index:0;pointer-events:none;background:radial-gradient(520px 420px at 10% 6%,rgba(59,130,246,.17),transparent 70%),radial-gradient(640px 520px at 94% 28%,rgba(59,130,246,.2),transparent 70%),radial-gradient(560px 460px at 38% 100%,rgba(59,130,246,.1),transparent 70%);animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(-3%,2%,0) scale(1.07)}}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes tape{to{transform:translateX(-50%)}}
+
+.top{left:20px;right:20px;top:12px;max-width:1180px;margin:0 auto;border:1px solid var(--line);border-radius:999px;padding:9px 12px 9px 18px;background:rgba(15,15,15,.8)}
+.brand i{border-radius:50% 50% 50% 14%;background:var(--gr);box-shadow:0 0 24px -4px rgba(59,130,246,.7)}
+.pill{background:rgba(255,255,255,.04)}
+.btn{border-radius:999px}.btn.p{background:var(--gr);color:#00040f;box-shadow:0 12px 30px -14px var(--ac2)}
+.btn.g{background:rgba(255,255,255,.04)}
+.eye{width:max-content;padding:7px 16px;border:1px solid var(--line);border-radius:99px;background:rgba(255,255,255,.04)}.eye::after{display:none}
+h1 em{background:var(--gr);-webkit-background-clip:text;background-clip:text;color:transparent;text-decoration:underline wavy rgba(59,130,246,.6) 2px;text-underline-offset:.13em}
+.trust span{padding:6px 14px;border:1px solid var(--line);border-radius:99px;background:rgba(255,255,255,.03)}
+.chips i{border-radius:99px}
+
+/* hero: orbit rings behind the headline, leaf-shaped figure, bubble stats, pill countdown */
+.hero{position:relative}
+.hero::before,.hero::after{content:"";position:absolute;pointer-events:none;border-radius:50%;z-index:-1}
+.hero::before{right:-170px;top:70px;width:560px;height:560px;border:1px dashed rgba(255,255,255,.16);animation:spin 80s linear infinite}
+.hero::after{right:-90px;top:150px;width:400px;height:400px;border:1px solid rgba(59,130,246,.28);background:radial-gradient(circle at 30% 20%,rgba(59,130,246,.16),transparent 60%)}
+.fig{border:1px solid transparent;border-radius:60px 200px 60px 200px;padding:18px 46px 16px;background:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1.2px) 0 0/18px 18px padding-box,linear-gradient(#121212,#121212) padding-box,var(--gr) border-box}
+.stats{gap:12px;background:none;border:0}
+.stat{border:1px solid var(--line);background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015))}
+.stat:nth-child(1){border-radius:38px 38px 38px 8px}.stat:nth-child(2){border-radius:38px 8px 38px 38px}.stat:nth-child(3){border-radius:8px 38px 38px 38px}.stat:nth-child(4){border-radius:38px 38px 8px 38px}
+.cd{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:16px 38px;background:rgba(255,255,255,.04)}
+.cd b u,.cdband b u{color:var(--ac2)}
+
+/* scrolling topic tape */
+.tape{margin-top:80px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.tk{display:flex;gap:12px;width:max-content;animation:tape 46s linear infinite}
+.tk span{display:inline-flex;align-items:center;gap:9px;padding:10px 20px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);font:500 13px var(--mono);white-space:nowrap}
+.tk span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#60a5fa)}
+.tk span:nth-child(3n+2){--c:#3b82f6}.tk span:nth-child(3n){--c:#60a5fa}
+section#preview{padding-top:56px}
+
+/* cards: no more ruled boxes, every tile has its own silhouette */
+.grid3,.band,.papers,.steps,.types,.subs2{gap:14px;background:none;border:0}
+.f,.bn,.pp,.step,.ty,.sub2{border:1px solid var(--line);background:linear-gradient(160deg,rgba(255,255,255,.065),rgba(255,255,255,.015))}
+.f:hover,.pp:hover,.step:hover,.ty:hover,.sub2:hover{border-color:rgba(59,130,246,.65);transform:translateY(-4px)}
+.f:nth-child(3n+1){border-radius:46px 46px 46px 10px}.f:nth-child(3n+2){border-radius:10px 46px 46px 46px}.f:nth-child(3n){border-radius:46px 10px 46px 46px}
+#features .f:nth-child(1),#features .f:nth-child(4),#features .f:nth-child(5){grid-column:span 2}
+.ic{width:50px;height:50px;border:0;border-radius:50%;background:var(--gr);color:#00040f;font-weight:600}
+.f:nth-child(even) .ic,.sub2:nth-child(even) .ic{border-radius:0;clip-path:var(--hex)}
+.band{grid-template-columns:repeat(4,1fr)}
+.bn{aspect-ratio:1;display:grid;place-content:center;text-align:center;padding:10px;border:2px solid transparent;border-radius:50%;background:linear-gradient(#121212,#121212) padding-box,conic-gradient(from 200deg,#60a5fa,#3b82f6,#2563eb,#60a5fa,#60a5fa) border-box}
+.bn b{font-size:clamp(26px,3.2vw,44px)}
+.pp{border-radius:999px 999px 34px 34px;padding:64px 20px 30px;text-align:center}.pp b{font-size:46px}
+.subs2{grid-template-columns:repeat(2,1fr)}
+.sub2{border-radius:44px 44px 44px 10px}.sub2:nth-child(even){border-radius:10px 44px 44px 44px}
+.sub2:nth-child(8n+1){--c:#60a5fa}.sub2:nth-child(8n+2){--c:#3b82f6}.sub2:nth-child(8n+3){--c:#2563eb}.sub2:nth-child(8n+4){--c:#60a5fa}.sub2:nth-child(8n+5){--c:#7dd3fc}.sub2:nth-child(8n+6){--c:#60a5fa}.sub2:nth-child(8n+7){--c:#ff9a85}.sub2:nth-child(8n){--c:#9be564}
+.sub2 .ic{background:var(--c)}.sub2 .chips i:hover{color:var(--c);border-color:var(--c)}
+.steps{align-items:start}.step{border-radius:50px 12px 50px 12px}.step:nth-child(even){border-radius:12px 50px 12px 50px;margin-top:32px}
+.step::before{display:grid;place-items:center;width:54px;height:54px;clip-path:var(--hex);background:var(--gr);color:#00040f;font-weight:600;margin-bottom:26px}
+.tbl{border-radius:34px;overflow:hidden;background:rgba(255,255,255,.03)}
+.ty{border-radius:44px}.ty:nth-child(2){border-radius:44px 44px 44px 10px}.ty .tb,.ty .tb i{border-radius:99px}.ty .tb i{background:var(--gr)}
+.mock{border-radius:36px;overflow:hidden;box-shadow:0 50px 120px -50px rgba(59,130,246,.4)}
+.mk-dot:nth-child(1){background:#60a5fa;border:0}.mk-dot:nth-child(2){background:#7dd3fc;border:0}.mk-dot:nth-child(3){background:#60a5fa;border:0}
+.mk-meta i,.mk-opt{border-radius:99px}.mk-opt{padding:11px 20px}.mk-grid u{border-radius:50%}.mk-bar,.mk-bar i{border-radius:99px}.mk-bar i{background:var(--gr)}
+.cdband{border-radius:100px 30px 100px 30px;border-left:1px solid var(--line);padding:36px 64px}
+.faq{display:grid;gap:12px;border:0}.fq{border:1px solid var(--line);border-radius:32px;background:rgba(255,255,255,.03)}
+.fq:nth-child(even){border-radius:12px 32px 32px 32px}
+.fq summary{padding:20px 28px}.fq p{padding:0 28px 24px}
+.fq summary::after{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--gr);color:#00040f;font:400 24px/1 var(--mono);flex:none}
+.fin{padding:96px 40px;border-radius:150px 48px 150px 48px;background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,.24),transparent 62%),radial-gradient(rgba(255,255,255,.07) 1px,transparent 1.2px) 0 0/20px 20px,var(--pn)}
+footer{text-align:center}
+
+/* sign-in card: bubble with a gradient edge */
+.card{border:1px solid transparent;border-radius:48px 48px 48px 12px;background:linear-gradient(var(--pn),var(--pn)) padding-box,var(--gr) border-box;box-shadow:0 50px 100px -40px rgba(59,130,246,.35)}
+.tabs{border-radius:999px}.tabs button{border-radius:999px}.tabs button.on{background:var(--gr);color:#00040f}
+input{border-radius:18px;padding:14px 18px}.av{border-radius:50%;background:var(--gr)}
+
+@media(max-width:760px){#features .f:nth-child(n){grid-column:auto}.band,.papers{grid-template-columns:1fr 1fr}.step:nth-child(even){margin-top:0}.fin{border-radius:60px 24px;padding:60px 22px}.cdband{border-radius:40px 16px;padding:28px}.hero::before,.hero::after{display:none}.subs2{grid-template-columns:1fr}.pp{padding-top:44px}.top{left:10px;right:10px}}
+@media(prefers-reduced-motion:reduce){body::after,.tk,.hero::before{animation:none}}
+
+/* ===== round 2: motion + detail ===== */
+@keyframes bob{50%{transform:translateY(-14px) rotate(4deg)}}
+@keyframes prog{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.top::after{content:"";position:absolute;left:34px;right:34px;bottom:-1px;height:2px;border-radius:2px;background:var(--gr);transform:scaleX(0);transform-origin:0 50%}
+@supports(animation-timeline:scroll()){.top::after{animation:prog linear both;animation-timeline:scroll(root)}}
+.glyphs i{position:absolute;z-index:-1;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;border:1px solid var(--line);background:rgba(14,14,14,.85);font:italic 500 26px var(--serif);color:#60a5fa;animation:bob 7s ease-in-out infinite;pointer-events:none}
+.glyphs i:nth-child(1){right:60px;top:84px}.glyphs i:nth-child(2){right:-34px;top:250px;color:#3b82f6;animation-delay:-2s}
+.glyphs i:nth-child(3){right:-64px;top:390px;color:#60a5fa;animation-delay:-4s}.glyphs i:nth-child(4){right:260px;top:78px;color:#2563eb;animation-delay:-1s}
+.btn.p{background-size:200% 100%;transition:background-position .5s,transform .18s,box-shadow .18s}.btn.p:hover{background-position:100% 0}
+.sub2,.f{position:relative;overflow:hidden}
+.sub2::after{content:"";position:absolute;right:22px;bottom:-14px;font:italic 400 110px/1 var(--serif);color:var(--c);opacity:.09;pointer-events:none}
+.sub2:nth-child(1)::after{content:"θ"}.sub2:nth-child(2)::after{content:"∫"}.sub2:nth-child(3)::after{content:"⋈"}.sub2:nth-child(4)::after{content:"{ }"}
+.sub2:nth-child(5)::after{content:"λ"}.sub2:nth-child(6)::after{content:"∇"}.sub2:nth-child(7)::after{content:"μ"}.sub2:nth-child(8)::after{content:"π"}
+#features .f:nth-child(1)::after{content:"∑";position:absolute;right:30px;bottom:-30px;font:italic 400 150px/1 var(--serif);color:#60a5fa;opacity:.08}
+footer{position:relative;overflow:hidden;padding-top:120px}
+footer::before{content:"gate zone";position:absolute;left:50%;top:6px;transform:translateX(-50%);font:italic 500 clamp(80px,17vw,230px)/1 var(--serif);white-space:nowrap;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.11);pointer-events:none}
+.band-s{position:relative}
+@media(max-width:1020px){.glyphs{display:none}}
+@media(prefers-reduced-motion:reduce){.glyphs i{animation:none}}
+
+/* solid background */
+body::before,body::after{display:none !important}
+
+
+.hero h1 .kw{display:inline-block;opacity:0;transform:translateY(.45em);filter:blur(10px);animation:kw .9s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes kw{to{opacity:1;transform:none;filter:none}}
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+.card{background:linear-gradient(var(--pn),var(--pn)) padding-box,conic-gradient(from var(--a),#60a5fa,#3b82f6,#60a5fa,#60a5fa) border-box;animation:cs 7s linear infinite}
+@keyframes cs{to{--a:360deg}}
+@media(prefers-reduced-motion:reduce){.kw{animation:none;opacity:1;transform:none;filter:none}.card{animation:none}}
+
+/* ===== ML Background ===== */
+#ml-bg{--c1:#60a5fa;--c2:#3b82f6;--c3:#60a5fa;--c4:#f1ece1;--k:.36;position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#ml-bg.pr{--k:.2}
+#ml-bg.pr.lt{--c1:#1d4ed8;--c2:#1d4ed8;--c3:#2563eb;--c4:#161616;--k:.15}
+#ml-bg .it{position:absolute;opacity:calc(var(--o)*var(--k));animation:mlf var(--d) ease-in-out infinite alternate;will-change:transform}
+#ml-bg .fm{font:italic 400 18px 'Fraunces',Georgia,serif;white-space:nowrap}
+#ml-bg .cp{font:500 11px 'IBM Plex Mono',monospace;border:1px solid currentColor;border-radius:999px;padding:3px 11px;white-space:nowrap}
+#ml-bg .gl{font:italic 400 64px 'Fraunces',Georgia,serif;line-height:1}
+@keyframes mlf{from{transform:translate(0,0) rotate(var(--r))}to{transform:translate(var(--dx),var(--dy)) rotate(calc(var(--r) + var(--dr)))}}
+body.gated #ml-bg{visibility:hidden}
+@media(prefers-reduced-motion:reduce){#ml-bg .it{animation:none;transform:rotate(var(--r))}}
+.fig figcaption{grid-column:1/-1;text-align:right}
+
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas><div class="warp"></div><div class="vig"></div>
+
+<header class="top">
+  <div class="brand"><i>g</i>gate <b>zone</b></div>
+  <span class="pill" id="pillCount">GATE DA 2027</span>
+  <a class="btn p jump" href="#auth" style="padding:9px 16px">Sign in</a>
+</header>
+
+<div class="wrap">
+  <main>
+    <section class="hero"><div class="glyphs" aria-hidden="true"><i>∑</i><i>∇</i><i>∫</i><i>λ</i></div>
+      <span class="eye">GATE DA · Practice studio</span>
+      <h1>Train on the <em>math</em> behind the machines.</h1>
+      <p class="lede">A focused practice studio for GATE Data Science &amp; AI. Build equal-split sets across subjects and topics, drill past papers, and track every question you save.</p>
+      <div class="cta"><a class="btn p" href="#auth" id="ctaReg">Create free account</a><a class="btn g" href="#preview">See it in action</a></div>
+      <figure class="fig rv" role="img" aria-label="Gradient descent walking down a loss surface"><svg viewBox="0 0 560 200" fill="none" aria-hidden="true"><g stroke="rgba(241,236,225,.18)"><ellipse cx="410" cy="105" rx="150" ry="92"/><ellipse cx="410" cy="105" rx="108" ry="66"/><ellipse cx="410" cy="105" rx="68" ry="40"/><ellipse cx="410" cy="105" rx="30" ry="17"/></g><path class="path" d="M60 22C150 30 230 150 330 128S392 110 410 105" stroke="#60a5fa" stroke-width="2.5"/><g fill="#121212" stroke="#60a5fa" stroke-width="2"><circle cx="60" cy="22" r="5"/><circle cx="184" cy="82" r="4"/><circle cx="330" cy="128" r="4"/></g><circle cx="410" cy="105" r="7" fill="#60a5fa"/><text x="60" y="48" fill="#a09f9a" font-family="IBM Plex Mono" font-size="11">θ₀</text><text x="424" y="92" fill="#60a5fa" font-family="IBM Plex Mono" font-size="11">θ*</text></svg><figcaption>θ ← θ − η∇L(θ)</figcaption></figure><div class="stats">
+        <div class="glass stat"><b>1,415</b><span>Questions</span></div>
+        <div class="glass stat"><b>8</b><span>Subjects</span></div>
+        <div class="glass stat"><b>2024–26</b><span>Past papers</span></div>
+        <div class="glass stat"><b>MCQ·MSQ·NAT</b><span>All types</span></div>
+      </div>
+      <div class="glass cd"><div><small>First paper · 6 Feb 2027</small><b id="cd">--</b></div></div>
+      <div class="trust"><span>✓ Free to use</span><span>✓ Official GATE 2024–26 papers</span><span>✓ Full mock paper mode</span><span>✓ Hints &amp; step-by-step explanations</span></div>
+    </section>
+
+    <div class="tape" aria-hidden="true"><div class="tk"><span>Backpropagation</span><span>Self-attention</span><span>Eigenvalues</span><span>Bayes' theorem</span><span>Gradient descent</span><span>Transformers</span><span>CNN</span><span>LSTM</span><span>SVD</span><span>Softmax</span><span>NLP</span><span>KL divergence</span><span>Backpropagation</span><span>Self-attention</span><span>Eigenvalues</span><span>Bayes' theorem</span><span>Gradient descent</span><span>Transformers</span><span>CNN</span><span>LSTM</span><span>SVD</span><span>Softmax</span><span>NLP</span><span>KL divergence</span></div></div><section id="preview">
+      <span class="eye rv">Inside the studio</span>
+      <h2 class="rv" style="margin-top:16px">Practise like it’s<br>exam day.</h2>
+      <p class="lede rv">A clean question view with a timer, a question map, instant checking and a tutor one click away.</p>
+      <div class="glass mock rv">
+        <div class="mk-top"><span class="mk-dot"></span><span class="mk-dot"></span><span class="mk-dot"></span><b>Practice session</b><em>◷ 12:41</em></div>
+        <div class="mk-body">
+          <div class="mk-q">
+            <div class="mk-meta"><i>Artificial Intelligence</i><i>Uninformed search</i><i>MCQ</i><i>1 mark</i></div>
+            <p>Which data structure is the most suited for implementing Uniform Cost Search?</p>
+            <div class="mk-opt"><b>A</b>Queue</div>
+            <div class="mk-opt"><b>B</b>Skip lists</div>
+            <div class="mk-opt on"><b>C</b>Min heap</div>
+            <div class="mk-opt"><b>D</b>Max heap</div>
+            <div class="mk-act"><span class="btn p sm">Check answer</span><span class="btn g sm">Hint</span><span class="btn g sm">Explain</span><span class="btn g sm">☆ Save</span></div>
+          </div>
+          <div class="mk-side">
+            <small>Question map · 7 / 20</small>
+            <div class="mk-grid"><u class="d">1</u><u class="d">2</u><u class="d">3</u><u class="d">4</u><u class="x">5</u><u class="d">6</u><u class="c">7</u><u>8</u><u>9</u><u>10</u><u>11</u><u>12</u><u>13</u><u>14</u><u>15</u><u>16</u><u>17</u><u>18</u><u>19</u><u>20</u></div>
+            <div class="mk-bar"><i style="width:35%"></i></div>
+            <small>5 correct · 1 wrong · 1 in progress</small>
+          </div>
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="glass f rv"><div class="ic">◷</div><h3>Practice or timed</h3><p>Learn at your pace, or race the clock the way the real paper does.</p></div>
+        <div class="glass f rv"><div class="ic">✦</div><h3>Hint ladder</h3><p>Hints get more specific one step at a time, so you stay in charge of the answer.</p></div>
+        <div class="glass f rv"><div class="ic">▤</div><h3>Full explanations</h3><p>Every option is explained, with the working and the trap it was built on.</p></div>
+      </div>
+    </section>
+
+    <section class="band-s">
+      <div class="band">
+        <div class="glass bn rv"><b>1,415</b><span>practice questions</span></div>
+        <div class="glass bn rv"><b>195</b><span>previous-year questions</span></div>
+        <div class="glass bn rv"><b>61</b><span>topics covered</span></div>
+        <div class="glass bn rv"><b>3</b><span>real GATE papers</span></div>
+      </div>
+    </section>
+
+    <section id="features">
+      <span class="eye rv">Built for the exam</span>
+      <h2 class="rv" style="margin-top:16px">Everything a GATE DA<br>aspirant needs.</h2>
+      <div class="grid3">
+        <div class="glass f rv"><div class="ic">▦</div><h3>Custom practice sets</h3><p>Pick subjects and topics, set a length, and every set is split equally across what you chose.</p></div>
+        <div class="glass f rv"><div class="ic">▤</div><h3>Question library</h3><p>Browse the full bank, including GATE 2024–2026 past papers, filtered by year, subject, topic and type.</p></div>
+        <div class="glass f rv"><div class="ic">◷</div><h3>Full mock paper</h3><p>Sit a complete GATE DA style paper in one go and see how you really stand.</p></div>
+        <div class="glass f rv"><div class="ic">∑</div><h3>MCQ, MSQ &amp; NAT</h3><p>Practise exactly the formats the real paper uses, with marks and negative marking in mind.</p></div>
+        <div class="glass f rv"><div class="ic">✦</div><h3>Hints &amp; explanations</h3><p>Stuck? Ask for a nudge or a full walkthrough without leaving the question.</p></div>
+        <div class="glass f rv"><div class="ic">⌘</div><h3>Saved questions</h3><p>Bookmark the tricky ones and come back to them before the exam.</p></div>
+        <div class="glass f rv"><div class="ic">◈</div><h3>Review your mistakes</h3><p>Go back through what you got wrong and see the solution next to your answer.</p></div>
+        <div class="glass f rv"><div class="ic">▲</div><h3>Progress tracking</h3><p>Sessions, scores and topic-wise accuracy are stored in your account so you can see what to fix.</p></div>
+        <div class="glass f rv"><div class="ic">◉</div><h3>Your own account</h3><p>Sign in with your email and a password so your sets and saves are yours.</p></div>
+      </div>
+    </section>
+
+    <section id="subjects">
+      <span class="eye rv">Syllabus</span>
+      <h2 class="rv" style="margin-top:16px">Eight subjects.<br>Sixty-one topics.</h2>
+      <p class="lede rv">The whole GATE DA syllabus, organised so you can drill one topic or mix them all.</p>
+      <div class="subs2"><div class="glass sub2 rv"><div class="sh"><div class="ic">✦</div><div><h3>Artificial Intelligence</h3><span>191 questions · 6 topics</span></div></div><div class="chips"><i>Uninformed search</i><i>Informed search &amp; heuristics</i><i>Adversarial search</i><i>Propositional &amp; predicate logic</i><i>Reasoning under uncertainty</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">∫</div><div><h3>Calculus &amp; Optimization</h3><span>149 questions · 6 topics</span></div></div><div class="chips"><i>Limits &amp; continuity</i><i>Differentiability &amp; MVT</i><i>Taylor series</i><i>Maxima, minima &amp; convexity</i><i>Gradient methods</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">▤</div><div><h3>Database Management</h3><span>218 questions · 10 topics</span></div></div><div class="chips"><i>ER model</i><i>Relational model &amp; keys</i><i>Relational algebra</i><i>Tuple relational calculus</i><i>SQL</i><i>FDs &amp; normal forms</i><i>Indexing &amp; B-trees</i><i>Data transformation</i><i>Warehouse &amp; OLAP</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">⌘</div><div><h3>Programming, DS &amp; Algorithms</h3><span>207 questions · 9 topics</span></div></div><div class="chips"><i>Python objects &amp; mutability</i><i>Python functions &amp; scope</i><i>Complexity &amp; recurrences</i><i>Arrays, stacks &amp; lists</i><i>Trees, BSTs &amp; heaps</i><i>Hashing</i><i>Searching &amp; sorting</i><i>Graphs &amp; shortest paths</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">▦</div><div><h3>Linear Algebra</h3><span>201 questions · 8 topics</span></div></div><div class="chips"><i>Vector spaces</i><i>Matrices</i><i>Rank &amp; nullity</i><i>Determinants</i><i>Eigenvalues &amp; eigenvectors</i><i>Quadratic forms</i><i>Projections, LU &amp; SVD</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">◉</div><div><h3>Machine Learning</h3><span>185 questions · 9 topics</span></div></div><div class="chips"><i>Regression &amp; ridge</i><i>Logistic regression &amp; metrics</i><i>kNN, Naive Bayes, LDA</i><i>SVM</i><i>Trees &amp; ensembles</i><i>Bias–variance</i><i>Neural networks &amp; backprop</i><i>Clustering &amp; PCA</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">Σ</div><div><h3>Probability &amp; Statistics</h3><span>234 questions · 9 topics</span></div></div><div class="chips"><i>Counting</i><i>Conditional probability</i><i>Bayes theorem</i><i>Random variables</i><i>Discrete distributions</i><i>Continuous distributions</i><i>Joint distributions &amp; covariance</i><i>CLT &amp; inference</i><i>Mixed</i></div></div><div class="glass sub2 rv"><div class="sh"><div class="ic">A</div><div><h3>General Aptitude</h3><span>30 questions · 4 topics</span></div></div><div class="chips"><i>Verbal ability</i><i>Numerical ability</i><i>Spatial reasoning</i><i>Analytical reasoning</i></div></div></div>
+    </section>
+
+    <section id="papers">
+      <span class="eye rv">Past papers</span>
+      <h2 class="rv" style="margin-top:16px">The real papers,<br>ready to practise.</h2>
+      <div class="papers">
+        <div class="glass pp rv"><small>GATE</small><b>2024</b><span>65 questions</span><p>Official answers and source notes.</p></div>
+        <div class="glass pp rv"><small>GATE</small><b>2025</b><span>65 questions</span><p>Official answers and source notes.</p></div>
+        <div class="glass pp rv"><small>GATE</small><b>2026</b><span>65 questions</span><p>Official answers and source notes.</p></div>
+        <div class="glass pp bank rv"><small>PLUS</small><b>1,220</b><span>bank questions</span><p>Extra practice built topic by topic.</p></div>
+      </div>
+    </section>
+
+    <section id="pattern">
+      <span class="eye rv">Know the paper</span>
+      <h2 class="rv" style="margin-top:16px">GATE DA<br>at a glance.</h2>
+      <div class="glass tbl rv">
+        <div class="tr th"><span>Section</span><span>Questions</span><span>Marks</span></div>
+        <div class="tr"><span>General Aptitude</span><span>10</span><span>15</span></div>
+        <div class="tr"><span>Core subjects (DA)</span><span>55</span><span>85</span></div>
+        <div class="tr tt"><span>Total · 3 hours</span><span>65</span><span>100</span></div>
+      </div>
+      <div class="types">
+        <div class="glass ty rv"><h3>MCQ</h3><div class="tb"><i style="width:49%"></i></div><span>693 questions</span><p>One correct option. A wrong answer costs ⅓ mark on a 1-mark question and ⅔ on a 2-mark question.</p></div>
+        <div class="glass ty rv"><h3>MSQ</h3><div class="tb"><i style="width:21%"></i></div><span>295 questions</span><p>One or more correct options. No negative marking, and no partial credit.</p></div>
+        <div class="glass ty rv"><h3>NAT</h3><div class="tb"><i style="width:30%"></i></div><span>427 questions</span><p>Type the numerical answer yourself. No options and no negative marking.</p></div>
+      </div>
+      <p class="note rv">Always confirm dates and rules on the official GATE website.</p>
+    </section>
+
+    <section>
+      <span class="eye rv">How it works</span>
+      <h2 class="rv" style="margin-top:16px">From sign-up to<br>solving in a minute.</h2>
+      <div class="steps">
+        <div class="glass step rv"><h3>Create your account</h3><p>Register with your email and a password.</p></div>
+        <div class="glass step rv"><h3>Build your set</h3><p>Select subjects and topics, then choose how many questions, or start a full mock paper.</p></div>
+        <div class="glass step rv"><h3>Practise &amp; learn</h3><p>Solve, ask for a hint, check the explanation and save the hard ones.</p></div>
+        <div class="glass step rv"><h3>Review &amp; improve</h3><p>Look back at mistakes and your topic-wise progress, then go again on the weak spots.</p></div>
+      </div>
+    </section>
+
+    <section class="cdband-s">
+      <div class="glass cdband rv"><div><small>GATE DA 2027 · first paper 6 Feb 2027</small><b id="cd2">--</b></div><a class="btn p" href="#auth">Start practising today</a></div>
+    </section>
+
+    <section id="faq">
+      <span class="eye rv">Questions</span>
+      <h2 class="rv" style="margin-top:16px">Good to know.</h2>
+      <div class="faq"><details class="glass fq rv"><summary>Is Gate Zone really free?</summary><p>Yes. Create an account with your email and a password and everything in the studio is open to you.</p></details><details class="glass fq rv"><summary>Which exam is it for?</summary><p>GATE Data Science &amp; Artificial Intelligence (DA). Every subject and topic follows the DA syllabus.</p></details><details class="glass fq rv"><summary>Are the past papers included?</summary><p>GATE 2024, 2025 and 2026 are in the library, 65 questions each, with the official answers and source notes.</p></details><details class="glass fq rv"><summary>Can I practise only what I am weak at?</summary><p>Yes. Pick any subjects and topics, set the length, and the set is split equally across your choice. You can also filter the library by year, type, subject and topic.</p></details><details class="glass fq rv"><summary>Is there negative marking?</summary><p>It follows the real paper: a wrong MCQ costs one third of the marks on a 1-mark question and two thirds on a 2-mark question. MSQ and NAT have no negative marking.</p></details><details class="glass fq rv"><summary>Do I need to install anything?</summary><p>No. It runs in your browser. Your saved questions, sessions and progress sit in your account.</p></details></div>
+    </section>
+
+    <section class="final">
+      <div class="glass fin rv"><h2>Your GATE DA prep,<br>in one place.</h2><p>Create a free account and build your first set in under a minute.</p><a class="btn p" href="#auth" style="margin-top:6px">Create free account</a></div>
+    </section>
+    <footer>© Gate Zone · Built for GATE DA aspirants · Not affiliated with the organising institute of GATE</footer>
+  </main>
+
+  <aside class="auth" id="auth">
+    <div class="glass card" id="card">
+      <div id="vOut">
+        <h2>Welcome</h2>
+        <p class="s">Sign in or register to open the practice studio.</p>
+        <div class="tabs"><button id="tIn" class="on" type="button">Sign in</button><button id="tUp" type="button">Register</button></div>
+        <form id="f" autocomplete="on" novalidate>
+          <label for="uid">Email</label><input id="uid" type="email" autocomplete="email" placeholder="you@example.com">
+          <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+          <div id="pw2w" hidden><label for="pw2">Confirm password</label><input id="pw2" type="password" autocomplete="new-password" placeholder="Repeat password"></div>
+          <button class="btn p go" id="sub" type="submit">Sign in</button>
+          <p class="msg" id="msg" role="status"></p>
+        </form>
+        <p class="note"><button type="button" id="forgot" style="background:none;border:0;color:var(--pen);cursor:pointer;font:inherit;padding:0">Forgot password?</button></p>
+      </div>
+      <div id="vIn" hidden>
+        <div class="av" id="av">G</div>
+        <h2>You’re signed in</h2>
+        <p class="s">Signed in as</p><div class="uid" id="who"></div>
+        <div class="row"><a class="btn p" href="index.html" style="text-align:center">Open practice studio →</a><button class="btn g" id="out" type="button">Sign out</button></div>
+        <p class="msg ok" id="msgIn"></p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script src="Config.js"></script>
+<script>
+/* ===== Auth (same Supabase project as index.html, keys come from Config.js) ===== */
+const CFG=window.GATEGRIND_CONFIG||{}, SUPABASE_URL=CFG.SUPABASE_URL||'', SUPABASE_ANON_KEY=CFG.SUPABASE_ANON_KEY||'', SITE='index.html';
+const $=id=>document.getElementById(id);
+let sb=null, mode='in';
+const ready=new Promise(r=>{if(!SUPABASE_URL||!SUPABASE_ANON_KEY)return r();const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';s.onload=()=>{try{sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)}catch(e){}r()};s.onerror=()=>r();document.head.appendChild(s)});
+const say=(t,ok)=>{$('msg').textContent=t||'';$('msg').className='msg'+(ok?' ok':'')};
+function setMode(m){mode=m;$('tIn').classList.toggle('on',m==='in');$('tUp').classList.toggle('on',m==='up');$('pw2w').hidden=m==='in';$('sub').textContent=m==='in'?'Sign in':'Create account';$('pw').autocomplete=m==='in'?'current-password':'new-password';say('')}
+$('tIn').onclick=()=>setMode('in');$('tUp').onclick=()=>setMode('up');
+$('ctaReg').addEventListener('click',()=>{setMode('up');setTimeout(()=>$('uid').focus(),500)});
+function showIn(email,go){$('vOut').hidden=true;$('vIn').hidden=false;$('who').textContent=email;$('av').textContent=email[0].toUpperCase();
+  if(go){$('msgIn').textContent='Taking you to the studio…';document.body.classList.add('leave');setTimeout(()=>location.href=SITE,950)}}
+function showOut(){$('vIn').hidden=true;$('vOut').hidden=false;setMode('in')}
+$('f').addEventListener('submit',async e=>{e.preventDefault();
+  const email=$('uid').value.trim(),pw=$('pw').value;
+  if(!/^\S+@\S+\.\S+$/.test(email))return say('Enter a valid email address.');
+  if(pw.length<6)return say('Password needs at least 6 characters.');
+  if(mode==='up'&&pw!==$('pw2').value)return say('Passwords do not match.');
+  $('sub').disabled=true;say('Please wait…',true);await ready;
+  if(!sb){$('sub').disabled=false;return say('Sign-in is not set up. Config.js must be in the same folder as this page.')}
+  try{
+    if(mode==='up'){
+      const{data,error}=await sb.auth.signUp({email,password:pw});if(error)throw error;
+      if(!data.session){setMode('in');say('Account created. Open the confirmation link sent to your email, then sign in here.',true);return}
+      await sb.auth.signOut({scope:'local'});setMode('in');say('Account created. Please sign in to continue.',true);return}
+    const{error}=await sb.auth.signInWithPassword({email,password:pw});if(error)throw error;
+    sessionStorage.setItem('gg-opened','1');say('');showIn(email,true);
+  }catch(err){say(/invalid login/i.test(err.message)?'Wrong email or password.':err.message)}
+  finally{$('sub').disabled=false}
+});
+$('forgot').onclick=async()=>{const email=$('uid').value.trim();if(!email)return say('Type your email above first, then press Forgot password.');
+  await ready;if(!sb)return;const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:new URL(SITE,location.href).href});
+  say(error?error.message:'Password reset link sent. Check your email.',!error)};
+$('out').onclick=async()=>{await ready;try{sb&&await sb.auth.signOut()}catch(e){}sessionStorage.removeItem('gg-opened');showOut()};
+(async()=>{await ready;
+  if(!sb)return say('Sign-in is not set up. Config.js with your Supabase keys must be in the same folder as this page.');
+  /* same rule as the studio: a fresh visit always asks for sign-in again */
+  if(location.search.includes('logout')||!sessionStorage.getItem('gg-opened')){try{await sb.auth.signOut({scope:'local'})}catch(e){}return}
+  try{const{data}=await sb.auth.getSession();if(data.session)showIn(data.session.user.email,false)}catch(e){}})();
+
+/* ===== Countdown ===== */
+const T=new Date('2027-02-06T09:30:00+05:30').getTime();
+function tick(){let s=Math.max(0,Math.floor((T-Date.now())/1000));const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);s%=60;
+  const p=n=>String(n).padStart(2,'0');$('cd').innerHTML=`${d}<u>d</u>${p(h)}<u>h</u>${p(m)}<u>m</u>${p(s)}<u>s</u>`;if($('cd2'))$('cd2').innerHTML=$('cd').innerHTML;$('pillCount').textContent=d+' days to GATE DA'}
+tick();setInterval(tick,1000);
+
+/* ===== Scroll reveal ===== */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+/* 3D tilt on the auth card */
+(()=>{const c=$('card');addEventListener('pointermove',e=>{const x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;c.style.transform=`rotateY(${x*-6}deg) rotateX(${y*5}deg)`},{passive:true})})();
+
+
+
+/* flip the card when switching Sign in / Register */
+['tIn','tUp'].forEach(id=>$(id).addEventListener('click',()=>{const c=$('card');c.classList.remove('flip');void c.offsetWidth;c.classList.add('flip')}));
+</script>
+
+
+<script>
+(()=>{const h=document.querySelector('.hero h1');if(!h)return;let i=0;const w=n=>{const s=document.createElement('span');s.className='kw';s.style.animationDelay=(.1+i++*.09)+'s';s.appendChild(n);return s};
+[...h.childNodes].forEach(n=>{if(n.nodeType===3){const f=document.createDocumentFragment();n.textContent.split(/(\s+)/).forEach(x=>{if(x)f.appendChild(/^\s+$/.test(x)?document.createTextNode(' '):w(document.createTextNode(x)))});n.replaceWith(f)}else if(n.nodeType===1)n.replaceWith(w(n.cloneNode(true)))})})();
+</script>
+
+<script>
+/* ===== ML Background: formulas, networks, attention maps and plots scattered across the page ===== */
+(()=>{const root=document.documentElement,land=!!document.querySelector('.hero');
+const L=document.createElement('div');L.id='ml-bg';L.className=land?'':'pr';L.setAttribute('aria-hidden','true');document.body.prepend(L);
+const sync=()=>L.classList.toggle('lt',!land&&!root.classList.contains('dark'));sync();new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['class']});
+const F=['softmax(zᵢ) = eᶻⁱ / Σⱼ eᶻʲ','Attention(Q,K,V) = softmax(QKᵀ/√dₖ)V','θ ← θ − η∇L(θ)','P(A|B) = P(B|A)P(A) / P(B)','σ(x) = 1 / (1 + e⁻ˣ)','Av = λv','∫ e^(−x²) dx = √π','H(p) = −Σ p(x) log p(x)','D_KL(P‖Q) = Σ P log(P/Q)','∂L/∂w = ∂L/∂ŷ · ∂ŷ/∂w','E[X] = Σ x·p(x)','ŷ = Wx + b','ReLU(x) = max(0, x)','‖x‖₂ = √(Σ xᵢ²)','N(μ, σ²)','A = UΣVᵀ','m̂ / (√v̂ + ε)','Var(X) = E[X²] − E[X]²','LayerNorm(x) = γ(x−μ)/σ + β','∇ₓ f(x) = [∂f/∂x₁ … ∂f/∂xₙ]','tanh(x) = (eˣ − e⁻ˣ)/(eˣ + e⁻ˣ)','L = −Σ yᵢ log ŷᵢ','MSE = (1/n) Σ (yᵢ − ŷᵢ)²','w ← w − η ∂L/∂w','GELU(x) = x·Φ(x)','cos θ = a·b / ‖a‖‖b‖','Σᵢ pᵢ = 1','x̂ = (x − μ) / √(σ² + ε)','hₜ = tanh(Whₜ₋₁ + Uxₜ)','A ∈ ℝ^(m×n)','lim n→∞ (1 + 1/n)ⁿ = e','Precision = TP / (TP + FP)','PE(pos,2i) = sin(pos / 10000^(2i/d))','f(x) = Σ aₙ cos(nπx / L)','∇·F = ∂P/∂x + ∂Q/∂y'];const C=['Multi-Head Attention','Conv 3×3','ReLU','GELU','Dropout 0.1','Adam','batch = 32','epoch 12','[CLS]','[SEP]','LSTM','Softmax','BatchNorm','Embedding','lr = 3e-4','Linear(512, 512)','MaxPool 2×2','Residual','Backprop','Tokenizer'];
+const G=['∑','∇','∫','λ','π','∂','θ','σ','μ','Δ'];
+let seed=7;const R=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const ln=(a,b,c,d,w)=>`<line x1="${a}" y1="${b}" x2="${c}" y2="${d}"${w?` stroke-width="${w}" opacity=".6"`:''}/>`;
+const net=ls=>{const P=ls.map((n,i)=>Array.from({length:n},(_,j)=>[12+i*96/(ls.length-1),60+(j-(n-1)/2)*Math.min(20,92/n)]));let s='';P.forEach((a,i)=>i&&P[i-1].forEach(p=>a.forEach(q=>s+=ln(p[0],p[1],q[0],q[1],.6))));P.flat().forEach(p=>s+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.6" fill="currentColor" fill-opacity=".3"/>`);return s};
+const blk=(y,t)=>`<rect x="24" y="${y}" width="72" height="22" rx="6"/><text x="60" y="${y+14}" font-size="8.5" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Mono,monospace">${t}</text>`;
+const S=[
+()=>net([3,4,2]),()=>net([4,5,5,3]),()=>net([2,4,4,1]),
+()=>blk(10,'Feed Forward')+blk(44,'Add &amp; Norm')+blk(78,'Self-Attention')+'<path d="M60 78V66M60 44V32M60 100v10M60 10V3M12 89h12M108 89H96M12 89V21h12"/>',
+()=>{let s='';for(let i=0;i<6;i++)for(let j=0;j<6;j++)s+=`<rect x="${14+j*16}" y="${14+i*16}" width="14" height="14" rx="2" fill="currentColor" fill-opacity="${(.08+R()*.8).toFixed(2)}" stroke="none"/>`;return s},
+()=>{let s='';for(let i=0;i<6;i++)for(let j=0;j<6;j++)s+=`<rect x="${14+j*16}" y="${14+i*16}" width="16" height="16" opacity=".5"/>`;return s+'<rect x="46" y="30" width="48" height="48" stroke-width="2.2" fill="currentColor" fill-opacity=".22"/>'},
+()=>'<path d="M8 100H112M60 12V108" opacity=".5"/><path d="M10 96C42 96 48 70 60 60S82 24 110 24" stroke-width="2"/>',
+()=>'<path d="M8 100H112M60 12V108" opacity=".5"/><path d="M10 60H60L110 14" stroke-width="2"/>',
+()=>'<path d="M6 100H114" opacity=".5"/><path d="M8 100C30 100 40 96 50 70S58 18 60 18S70 40 80 70S90 100 112 100" stroke-width="2"/>',
+()=>{let s='<path d="M12 100L108 22" stroke-width="2"/>';for(let i=0;i<16;i++){const x=12+R()*96;s+=`<circle cx="${x}" cy="${100-(x-12)*.81+(R()-.5)*30}" r="2.6" fill="currentColor" fill-opacity=".4"/>`}return s},
+()=>ln(60,18,30,54)+ln(60,18,90,54)+ln(30,54,14,94)+ln(30,54,46,94)+ln(90,54,74,94)+ln(90,54,106,94)+[[60,18],[30,54],[90,54]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="7"/>`).join('')+[14,46,74,106].map(x=>`<rect x="${x-6}" y="90" width="12" height="12" rx="3"/>`).join(''),
+()=>'<path d="M32 14H20V106H32M88 14H100V106H88"/>'+[['a','b','c'],['d','e','f'],['g','h','i']].map((r,i)=>r.map((t,j)=>`<text x="${40+j*20}" y="${42+i*24}" font-size="14" fill="currentColor" stroke="none" font-family="IBM Plex Mono,monospace">${t}</text>`).join('')).join(''),
+()=>[70,52,34,16].map(r=>`<ellipse cx="74" cy="62" rx="${r}" ry="${r*.62}"/>`).join('')+'<path d="M14 18C34 22 48 62 72 62" stroke-width="2"/><circle cx="14" cy="18" r="4"/><circle cx="74" cy="62" r="4" fill="currentColor"/>',
+()=>'<path d="M10 100H110M10 100V10" opacity=".5"/>'+[[96,34],[70,22],[100,78]].map(p=>`<path d="M10 100L${p[0]} ${p[1]}" stroke-width="1.8"/><circle cx="${p[0]}" cy="${p[1]}" r="3.4" fill="currentColor"/>`).join(''),
+()=>{const p=[[20,30],[56,16],[96,34],[30,78],[70,64],[100,96]],e=[[0,1],[1,2],[0,3],[1,4],[2,4],[3,4],[4,5],[2,5]];return e.map(a=>ln(p[a[0]][0],p[a[0]][1],p[a[1]][0],p[a[1]][1],.8)).join('')+p.map(q=>`<circle cx="${q[0]}" cy="${q[1]}" r="6" fill="currentColor" fill-opacity=".25"/>`).join('')}
+,
+()=>'<rect x="18" y="22" width="84" height="76" rx="10"/><circle cx="40" cy="48" r="10"/><circle cx="80" cy="48" r="10"/><path d="M32 78h56M60 22V8M60 98v12M6 60h12M102 60h12"/><text x="40" y="52" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" font-family="Georgia,serif">σ</text><text x="80" y="51" font-size="8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Mono,monospace">tanh</text><text x="60" y="82" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">×</text>',
+()=>[0,1,2,3].map(i=>`<rect x="${10+i*14}" y="${42-i*7}" width="36" height="46" opacity="${1-i*.15}"/>`).join('')+'<path d="M74 60h22M90 54l6 6-6 6"/><rect x="98" y="50" width="14" height="20"/>',
+()=>{let s='<path d="M8 104H112" opacity=".5"/>';for(let i=0;i<7;i++){const h=18+R()*70;s+=`<rect x="${12+i*14}" y="${104-h}" width="11" height="${h}" fill="currentColor" fill-opacity=".28"/>`}return s},
+()=>'<path d="M8 100H112M16 108V12" opacity=".5"/><path d="M16 100L110 16" stroke-dasharray="3 4" opacity=".5"/><path d="M16 100C20 40 44 20 110 16" stroke-width="2"/>',
+()=>'<path d="M8 100H112M16 108V12" opacity=".5"/><path d="M16 60H112M8 28H112M8 92H112" stroke-dasharray="2 4" opacity=".35"/><path d="M12 92C44 92 52 76 62 60S82 28 112 28" stroke-width="2"/>',
+()=>'<rect x="14" y="14" width="46" height="46" fill="currentColor" fill-opacity=".38"/><rect x="60" y="14" width="46" height="46"/><rect x="14" y="60" width="46" height="46"/><rect x="60" y="60" width="46" height="46" fill="currentColor" fill-opacity=".38"/>'+[['94',37,40],['6',83,40],['3',37,86],['97',83,86]].map(a=>`<text x="${a[1]}" y="${a[2]+22}" font-size="13" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Mono,monospace">${a[0]}</text>`).join(''),
+()=>{let s='';[[32,34],[84,40],[56,88]].forEach(c=>{for(let i=0;i<9;i++)s+=`<circle cx="${c[0]+(R()-.5)*34}" cy="${c[1]+(R()-.5)*30}" r="2.3" fill="currentColor" fill-opacity=".45"/>`;s+=`<path d="M${c[0]-5} ${c[1]-5}l10 10M${c[0]+5} ${c[1]-5}l-10 10" stroke-width="2"/>`});return s},
+()=>'<rect x="38" y="16" width="44" height="24" rx="5"/><rect x="38" y="76" width="44" height="24" rx="5"/><path d="M60 40V76M60 4V16M60 100v14M38 28H18V88H38M18 58h-6M100 58H72M82 28h20V88H82"/><text x="60" y="62" font-size="14" text-anchor="middle" fill="currentColor" stroke="none">+</text>',
+()=>net([4,6,4]),()=>net([5,3,5]),
+()=>'<circle cx="46" cy="60" r="32"/><circle cx="76" cy="60" r="32"/><text x="61" y="64" font-size="10" text-anchor="middle" fill="currentColor" stroke="none" font-family="Georgia,serif">A∩B</text>',
+()=>'<path d="M8 60H112" opacity=".5"/><path d="M8 60C22 12 38 12 50 60S78 108 92 60S104 30 112 52" stroke-width="2"/>',
+()=>'<path d="M8 100H112M16 108V12" opacity=".5"/><path d="M18 22C30 76 52 92 110 98" stroke-width="2"/><circle cx="18" cy="22" r="3.4" fill="currentColor"/><circle cx="52" cy="90" r="3.4" fill="currentColor"/>',
+()=>{let s='';for(let i=0;i<5;i++){s+=`<rect x="${6+i*22}" y="12" width="18" height="14" rx="3"/><rect x="${6+i*22}" y="94" width="18" height="14" rx="3"/>`;for(let j=0;j<5;j++)if(R()<.6)s+=ln(15+i*22,26,15+j*22,94,.8)}return s},
+()=>{let s='';for(let i=0;i<4;i++)for(let j=0;j<4;j++)s+=`<rect x="${8+j*12}" y="${30+i*12}" width="12" height="12" opacity=".5"/>`;return s+'<rect x="8" y="30" width="24" height="24" stroke-width="2" fill="currentColor" fill-opacity=".2"/><path d="M66 60h18M78 54l6 6-6 6"/><rect x="92" y="48" width="12" height="12"/><rect x="104" y="48" width="12" height="12" fill="currentColor" fill-opacity=".3"/><rect x="92" y="60" width="12" height="12" fill="currentColor" fill-opacity=".3"/><rect x="104" y="60" width="12" height="12"/>'},
+()=>['0 1 1 0 1','1 0 1 1 0','0 0 1 0 1','1 1 0 1 0'].map((t,i)=>`<text x="12" y="${30+i*20}" font-size="12" fill="currentColor" stroke="none" font-family="IBM Plex Mono,monospace" letter-spacing="3">${t}</text>`).join(''),
+()=>{let s='';for(let i=0;i<4;i++)for(let j=0;j<4;j++){const x=18+j*26,y=18+i*26,dx=60-x,dy=60-y,d=Math.hypot(dx,dy)||1;s+=`<path d="M${x} ${y}l${(dx/d*12).toFixed(1)} ${(dy/d*12).toFixed(1)}"/><circle cx="${x}" cy="${y}" r="1.6" fill="currentColor"/>`}return s}
+];
+function build(){seed=7;L.innerHTML='';const W=innerWidth,H=innerHeight,cw=W<700?125:168,ch=W<700?112:128,nc=Math.ceil(W/cw)+1,nr=Math.ceil(H/ch)+1,cl=['var(--c1)','var(--c2)','var(--c3)','var(--c4)'];let si=0,fi=0,gi=0,ci=0,h='';
+for(let r=0;r<nr;r++)for(let c=0;c<nc;c++){const k=(r*2+c)%4,x=(c-.3)*cw+R()*cw*.45+(r%2)*cw*.4,y=(r-.2)*ch+R()*ch*.4,col=cl[(r+c*2)%4],
+st=`left:${x|0}px;top:${y|0}px;color:${col};--o:${(.55+R()*.45).toFixed(2)};--d:${(16+R()*18)|0}s;--dx:${(R()-.5)*30|0}px;--dy:${(R()-.5)*30|0}px;--r:${(R()-.5)*24|0}deg;--dr:${(R()-.5)*10|0}deg;animation-delay:-${(R()*20)|0}s`;
+if(k===1)h+=`<span class="it fm" style="${st};font-size:${13+R()*12|0}px">${F[fi++%F.length]}</span>`;
+else if(k===3)h+=`<span class="it cp" style="${st}">${C[ci++%C.length]}</span>`;
+else if(k===2&&R()<.5)h+=`<span class="it gl" style="${st};font-size:${42+R()*38|0}px">${G[gi++%G.length]}</span>`;
+else{const z=62+R()*38|0;h+=`<svg class="it" viewBox="0 0 120 120" width="${z}" height="${z}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="${st}">${S[si++%S.length]()}</svg>`}}
+L.innerHTML=h}
+build();let to;addEventListener('resize',()=>{clearTimeout(to);to=setTimeout(build,250)});
+})();
+</script>
+</body>
+</html>

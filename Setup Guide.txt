@@ -1,0 +1,49 @@
+GATEGRIND: TURNING ON ONLINE ACCOUNTS (one-time, about 5 minutes, free)
+
+The website is only a set of files, so it has nowhere to keep other
+people's accounts by itself. Supabase is the free online database that
+stores them. Once you do the steps below, ANY visitor can register with
+an email and password, sign in from any device, and keep their progress.
+
+1. Make the database
+   - Go to supabase.com, sign up, click "New project", pick any name and
+     a database password, wait about a minute.
+   - Open  SQL Editor > New query, paste the whole of database-setup.sql,
+     press Run. (Safe to run again.)
+
+2. Connect the website
+   - In Supabase open  Project Settings > API.
+   - Copy "Project URL" and the "anon" (or "publishable") key.
+   - Open config.js and paste them between the quotes. Save.
+
+3. Tell Supabase your website address
+   - Authentication > URL Configuration.
+   - Set "Site URL" to your live site, e.g. https://yourname.vercel.app
+   - Add the same address under "Redirect URLs".
+   (This is where confirmation and password-reset links send people.)
+
+4. Choose how registration works
+   - Authentication > Sign In / Providers > Email.
+   - "Confirm email" ON  = people must click a link in their inbox first.
+   - "Confirm email" OFF = people get in immediately after registering.
+   - Supabase's built-in email sender allows only a few emails per hour.
+     For a real launch add your own SMTP in Authentication > SMTP Settings
+     (Brevo, Resend, Gmail SMTP and others have free plans).
+
+5. Put the site online
+   - Upload this whole folder (index.html, config.js, questions.js,
+     qimages and the rest) to a static host: Vercel, Netlify,
+     Cloudflare Pages or GitHub Pages.
+   - Open the live address: you should see the front page with
+     Sign in / Create account. Register once to test.
+
+Notes
+   - Passwords are handled by Supabase, never stored in these files.
+   - Each user can only read and change their own rows (row level
+     security is in database-setup.sql).
+   - Until config.js is filled in, sign-up and sign-in still work, but the
+     accounts live only in that visitor's browser (no email reset, no
+     syncing between devices). As soon as config.js is filled in, the site
+     switches to real online accounts automatically. Accounts made before
+     the switch stay on their device and are not moved online, so people
+     will need to register again once.

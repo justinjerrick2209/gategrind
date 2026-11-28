@@ -24,7 +24,7 @@ const die = msg => { console.error('\nSTOPPED: ' + msg); process.exit(2); };
 if (!KEY && !STATUS_ONLY) die('No API key. Get a free one at https://aistudio.google.com/apikey and set GEMINI_API_KEY (run-convert.bat asks for it).');
 if (typeof fetch !== 'function') die('This Node.js is too old. Install the current LTS version from https://nodejs.org');
 
-const TQ = String.raw`You transcribe exam question images into structured JSON. Copy the question exactly as printed; do not solve, correct or reword it. Ignore the small header line (question number, type, marks) and any watermark. Write mathematics in LaTeX with $...$ inline and $$...$$ for display. Use Markdown tables for tables and fenced code blocks for code. If the question has a figure (graph, scatter plot, tree, circuit, neural-network diagram, or any other diagram), write one short bracketed note in the question text such as [Figure: scatter plot with points A to G] and set has_figure to true, and also give figure_box: the tight bounding box of ONLY the figure itself (not the question text, not the tables, not the options) as [ymin, xmin, ymax, xmax], integers from 0 to 1000 relative to the whole image. If there are several figures, give one box that covers all of them. Return only JSON: {"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"has_figure":false,"figure_box":null}. Use capital letters as option keys, and an empty object for options when there are none (NAT). If an option is itself a picture, describe it briefly. Never return an empty question.`;
+const TQ = String.raw`You transcribe exam question images into structured JSON. Copy ONLY the question statement and its options, exactly as printed; do not solve, correct or reword it. IGNORE completely, and never include in any field: (1) the small header line such as '42 · NAT · 1 mark' or '159 · MSQ · 2 marks'; (2) every coloured horizontal line, strip, banner or shaded box, especially teal/blue ones, and the text inside them, for example 'MSQ One or more options are correct. No negative marking, and no partial credit...', 'NAT Enter the value...', 'MCQ Only one option is correct...' or any other answer-format instruction; (3) watermarks, logos, partial circles or arcs in the corners, page numbers, and any 'Select the correct...' style instruction that is not part of the question itself is NOT to be removed, but instruction boxes are. Also never include the question number or label in the question text: omit things like 'Q.2', 'Q2', 'Q.2)', 'Question 2', '2.' or '2)' at the start of the question. Some pictures are exam-paper tables with a left column holding 'Q.2' and '(A)'-'(D)', a right column holding the text, grid lines and an empty last row: ignore the grid lines, the question label and the empty rows, and return only the question text and the options. Do not include option labels such as '(A)' inside the option text; put the label only in the key. Write mathematics in LaTeX with $...$ inline and $$...$$ for display. Use Markdown tables for tables and fenced code blocks for code. If the question has a figure (graph, scatter plot, tree, circuit, neural-network diagram, or any other diagram), write one short bracketed note in the question text such as [Figure: scatter plot with points A to G] and set has_figure to true, and also give figure_box: the tight bounding box of ONLY the figure itself (not the question text, not the tables, not the options) as [ymin, xmin, ymax, xmax], integers from 0 to 1000 relative to the whole image. If there are several figures, give one box that covers all of them. Return only JSON: {"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"has_figure":false,"figure_box":null}. Use capital letters as option keys, and an empty object for options when there are none (NAT). If an option is itself a picture, describe it briefly. Never return an empty question.`;
 const TS = String.raw`You transcribe worked-solution images into Markdown. Copy the content faithfully; do not shorten, solve or correct it. Ignore the small header (question number and the Answer line) and any watermark. Write mathematics in LaTeX with $...$ inline and $$...$$ for display. Use Markdown tables and fenced code blocks where needed. Return only JSON: {"solution":"...","has_figure":false}. Set has_figure to true if the solution contains a figure, graph, tree, plot or diagram, and describe it inside square brackets. Never return an empty solution.`;
 
 const load = f => { const w = {}; vm.runInNewContext(fs.readFileSync(f, 'utf8'), { window: w, self: w, globalThis: w }); return w; };
@@ -76,6 +76,21 @@ const validBox = b => Array.isArray(b) && b.length === 4 && b.every(n => typeof 
   b[0] >= 0 && b[1] >= 0 && b[2] <= 1000 && b[3] <= 1000 && b[2] - b[0] >= 20 && b[3] - b[1] >= 20;
 const has = v => typeof v === 'string' && v.trim().length > 0;
 
+
+// Safety net: removes header lines and instruction banners that slipped into the text.
+const BANNER = /^\s*(?:\*\*)?(?:MCQ|MSQ|NAT)(?:\*\*)?\s*[:\-–—·]?\s*(?:only one option|one or more options|enter the|no negative|there is no|the answer is a|numerical|select all|answer type).*$/i;
+const HEADER = /^\s*\d{1,3}\s*[·•|.\-–—]\s*(?:MCQ|MSQ|NAT)\b.*$/i;
+const RULE = /^\s*(?:[-_=─━—]{3,}|\*{3,})\s*$/;
+const QNUM = /^\s*(?:\*\*)?(?:Q\.?\s*\d{1,3}\s*[.:)\-–]?|Question\s+\d{1,3}\s*[.:)\-–]?)(?:\*\*)?\s+/i;
+function tidy(t) {
+  let lines = String(t || '').replace(/\r/g, '').split('\n');
+  if (lines.length) lines[0] = lines[0].replace(QNUM, '').replace(/^\s*\d{1,3}\s*[.)]\s+(?=[A-Z$\\(])/, '');
+  lines = lines.filter(l => !BANNER.test(l) && !HEADER.test(l) && !RULE.test(l));
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+const tidyOpts = o => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [String(k).replace(/[()\s.]/g, '').toUpperCase(), tidy(String(v).replace(/^\s*\(?[A-Da-d]\)\s*|^\s*[A-Da-d][.:]\s+/, ''))]));
+const tidyAll = () => { for (const k of Object.keys(out)) { const c = out[k]; if (c.q) c.q = tidy(c.q); if (c.opts) c.opts = tidyOpts(c.opts); } };
+
 const save = () => fs.writeFileSync('questions_text.js', 'window.QUESTION_TEXT=' + JSON.stringify(out) + ';\n');
 // needs work: no question text yet (empty counts as missing); OR it has a figure but no crop box has been tried; OR no solution text yet
 const needsQ = q => q.image && (!out[q.id] || !has(out[q.id].q) || (out[q.id].fig && !out[q.id].box && !out[q.id].boxTried));
@@ -89,9 +104,9 @@ async function work(q, stats) {
   try {
     if (needsQ(q)) {
       const j = await call(TQ, [{ text: 'Transcribe this question.' }, img(q.image)]);
-      const text = String(j.question || '');
+      const text = tidy(j.question || '');
       if (!has(text)) throw new Error('empty question text returned');
-      c.q = text; c.opts = j.options && typeof j.options === 'object' ? j.options : {}; c.fig = !!j.has_figure;
+      c.q = tidy(text); c.opts = tidyOpts(j.options && typeof j.options === 'object' ? j.options : {}); c.fig = !!j.has_figure;
       c.box = c.fig && validBox(j.figure_box) ? j.figure_box.map(Math.round) : null; c.boxTried = true;
     }
     if (needsS(q)) {
@@ -138,6 +153,7 @@ try {
   if (!chosen.length) die('This key has no usable Gemini Flash model. Models it can see: ' + (names.slice(0, 8).join(', ') || 'none'));
   MODELS = chosen;
 } catch (e) { if (!(e instanceof Fatal) && e.message) die('Could not reach Google (' + e.message + '). Check your internet connection and try again.'); throw e; }
+tidyAll(); save();
 const t0 = Date.now();
 console.log(`${bank.length} questions; ${pending().length} still to convert. Model ${MODELS[0]}, ${CONC} at a time${DO_SOL ? ', including solutions' : ''}.`);
 for (let pass = 1; pass <= 4; pass++) {
